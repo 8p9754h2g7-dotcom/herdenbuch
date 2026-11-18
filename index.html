@@ -98,6 +98,9 @@ main{padding-bottom:170px!important}
 details.card summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between}
 details.card summary::after{content:"▾";color:var(--mute)}details[open].card summary::after{content:"▴"}
 .ftab{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px}.ftab th{text-align:left;color:var(--mute);font-weight:600;font-size:12px;padding:6px 4px;border-bottom:1px solid var(--line)}.ftab td{padding:8px 4px;border-bottom:1px solid var(--line)}.ftab tr[data-id]{cursor:pointer}.ftab td:last-child,.ftab th:last-child{text-align:right}
+#lock{position:fixed;inset:0;z-index:100;background:linear-gradient(160deg,#4d8a37 0%,#2f6224 60%,#1f4318 100%);display:flex;align-items:center;justify-content:center;padding:24px;padding-top:max(24px,env(safe-area-inset-top))}
+.lockbox{background:var(--bg);border-radius:22px;padding:26px 22px;width:100%;max-width:360px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+.lockbox input{margin-top:10px;text-align:center;font-size:18px}
 /* ===== Design: Grünland ===== */
 :root{
   --bg:#eef3e6;--card:#ffffff;--ink:#1f2d1a;--mute:#5f6f55;--line:#d5e0c8;
@@ -289,24 +292,33 @@ function behCard(b){return `<div class="card" ${S.db?`data-b="${esc(b.id)}" styl
 function tabbar(){return `<nav class="tabbar">${[["list","🐑","Schafe"],["lm","🐣","Lämmer"],["beh","💊","Behandlung"],["tb","🧹","Stallbuch"],["fin","💶","Finanzen"]].map(([k,i,t])=>`<button data-tab="${k}" class="${(S.tab||"list")===k?"on":""}"><b>${i}</b>${t}</button>`).join("")}</nav>`}
 function bindTabs(){document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;S.view="list";render();scrollTo(0,0)});const dm=$("dm");if(dm)dm.onclick=dataMenu}
 function behHTML(){
-  const all=S.beh.slice().sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
+  const alle=S.beh.slice().sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
+  const cur=new Date().getFullYear()+"";const jahre=[...new Set([cur,...alle.map(e=>(e.datum||"").slice(0,4)).filter(y=>/^\d{4}$/.test(y))])].sort().reverse();
+  const jahr=S.byear==="alle"||jahre.includes(S.byear)?S.byear:cur;
+  const all=jahr==="alle"?alle:alle.filter(e=>(e.datum||"").startsWith(jahr));
   const last={};for(const b of all){const k=(b.medikament||"").trim().toLowerCase();if(k&&!last[k])last[k]=b}
-  return `<header><h1>💊 Behandlungen <small>${all.length} Einträge</small><button class="btn sec sm" id="dm">💾</button></h1></header><main>
+  return `<header><h1>💊 Behandlungen <small>${all.length} Einträge${jahr==="alle"?"":" "+jahr}</small><button class="btn sec sm" id="dm">💾</button></h1></header><main>
+  <div class="yearbar"><span>📅 Jahr</span><select id="byr"><option value="alle" ${jahr==="alle"?"selected":""}>Alle Jahre</option>${jahre.map(y=>`<option ${y===jahr?"selected":""}>${y}</option>`).join("")}</select></div>
   ${Object.keys(last).length?`<h2>Zuletzt je Medikament</h2><div class="card">${Object.values(last).map(b=>`<div class="lamb" data-b="${esc(b.id)}" style="cursor:pointer"><b>${esc(b.medikament)}</b> – ${fmtD(b.datum)} <span style="color:var(--mute)">(${vor(b.datum)})</span><div style="color:var(--mute);font-size:13px">${tierText(b)}</div>${wzBadge(b)}</div>`).join("")}</div>`:""}
-  <h2>Alle Behandlungen</h2>
+  <h2>${jahr==="alle"?"Alle Behandlungen":"Behandlungen "+jahr}</h2>
   ${all.length?all.map(behCard).join(""):`<div class="empty">Noch keine Behandlung erfasst.<br>Tippe auf „+ Behandlung“.</div>`}
   </main>${S.db?`<button class="fab" id="addb">+ Behandlung</button>`:""}`}
-function bindBeh(){const a=$("addb");if(a)a.onclick=()=>behForm();document.querySelectorAll("[data-b]").forEach(x=>x.onclick=()=>behForm(S.beh.find(y=>y.id===x.dataset.b)))}
+function bindBeh(){const by=$("byr");if(by)by.onchange=()=>{S.byear=by.value;render()};const a=$("addb");if(a)a.onclick=()=>behForm();document.querySelectorAll("[data-b]").forEach(x=>x.onclick=()=>behForm(S.beh.find(y=>y.id===x.dataset.b)))}
 const TB_VORSCHLAG=["Stall ausmisten","Einstreuen","Klauenpflege","Schur","Zaun kontrolliert","Tränken gereinigt","Futter gekauft","Weidewechsel","Tierarzt-Besuch"];
 function tbHTML(){
-  const all=S.tb.slice().sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
+  const alle=S.tb.slice().sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
+  const cur=new Date().getFullYear()+"";const jahre=[...new Set([cur,...alle.map(e=>(e.datum||"").slice(0,4)).filter(y=>/^\d{4}$/.test(y))])].sort().reverse();
+  const jahr=S.tyear==="alle"||jahre.includes(S.tyear)?S.tyear:cur;
+  const all=jahr==="alle"?alle:alle.filter(e=>(e.datum||"").startsWith(jahr));
+  const anz={};for(const e of all){const k=(e.taetigkeit||"").trim().toLowerCase();anz[k]=(anz[k]||0)+1}
   const last={};for(const e of all){const k=(e.taetigkeit||"").trim().toLowerCase();if(k&&!last[k])last[k]=e}
-  return `<header><h1>🧹 Stallbuch <small>${all.length} Einträge</small><button class="btn sec sm" id="dm">💾</button></h1></header><main>
-  ${Object.keys(last).length?`<h2>Zuletzt erledigt</h2><div class="card">${Object.values(last).map(e=>`<div class="lamb" style="display:flex;justify-content:space-between;gap:8px"><b>${esc(e.taetigkeit)}</b><span style="color:var(--mute)">${fmtD(e.datum)} · ${vor(e.datum)}</span></div>`).join("")}</div>`:""}
-  <h2>Alle Einträge</h2>
+  return `<header><h1>🧹 Stallbuch <small>${all.length} Einträge${jahr==="alle"?"":" "+jahr}</small><button class="btn sec sm" id="dm">💾</button></h1></header><main>
+  <div class="yearbar"><span>📅 Jahr</span><select id="tyr"><option value="alle" ${jahr==="alle"?"selected":""}>Alle Jahre</option>${jahre.map(y=>`<option ${y===jahr?"selected":""}>${y}</option>`).join("")}</select></div>
+  ${Object.keys(last).length?`<h2>Zuletzt erledigt</h2><div class="card">${Object.values(last).map(e=>`<div class="lamb" style="display:flex;justify-content:space-between;gap:8px"><b>${esc(e.taetigkeit)} <span style="font-weight:400;color:var(--mute);font-size:13px">${anz[(e.taetigkeit||"").trim().toLowerCase()]}×</span></b><span style="color:var(--mute)">${fmtD(e.datum)} · ${vor(e.datum)}</span></div>`).join("")}</div>`:""}
+  <h2>${jahr==="alle"?"Alle Einträge":"Einträge "+jahr}</h2>
   ${all.length?all.map(e=>`<div class="card" data-t="${esc(e.id)}" style="cursor:pointer"><div style="display:flex;justify-content:space-between;font-weight:600"><span>${esc(e.taetigkeit)}</span><span>${fmtD(e.datum)}</span></div>${e.notiz?`<div style="color:var(--mute);font-size:14px;white-space:pre-wrap">${esc(e.notiz)}</div>`:""}</div>`).join(""):`<div class="empty">Noch keine Einträge.<br>z. B. „Stall ausmisten“ – tippe auf „+ Eintrag“.</div>`}
   </main>${S.db?`<button class="fab" id="addt">+ Eintrag</button>`:""}`}
-function bindTb(){const a=$("addt");if(a)a.onclick=()=>tbForm();document.querySelectorAll("[data-t]").forEach(x=>x.onclick=()=>tbForm(S.tb.find(y=>y.id===x.dataset.t)))}
+function bindTb(){const ty=$("tyr");if(ty)ty.onchange=()=>{S.tyear=ty.value;render()};const a=$("addt");if(a)a.onclick=()=>tbForm();document.querySelectorAll("[data-t]").forEach(x=>x.onclick=()=>tbForm(S.tb.find(y=>y.id===x.dataset.t)))}
 function tbForm(e){
   e=e||{datum:today()};
   const vs=[...new Set([...TB_VORSCHLAG,...S.tb.map(x=>x.taetigkeit).filter(Boolean)])];
@@ -369,16 +381,20 @@ function erloesSchaf(sid,jahr){const m=erloesMap(jahr);let sum=0,n=0;for(const l
 function lammLabel(y){return `${y.nr?esc(y.nr):"ohne Ohrmarke"} · ${y.sex==="m"?"♂":y.sex==="w"?"♀":"?"} · Mutter ${y.mutter?esc(y.mutter.nr):"?"} · geb. ${fmtD(y.datum)}`}
 function lebendeLaemmer(){return alleLaemmer().filter(y=>y.status==="lebend")}
 function lmHTML(){
-  const alle=alleLaemmer(),em=erloesMap();S.lmf=S.lmf||"alle";S.lms=S.lms||"lebend";
+  const em=erloesMap();S.lmf=S.lmf||"alle";S.lms=S.lms||"lebend";
+  const roh=alleLaemmer(),cur=new Date().getFullYear()+"";const jahre=[...new Set([cur,...roh.map(y=>(y.datum||"").slice(0,4)).filter(y=>/^\d{4}$/.test(y))])].sort().reverse();
+  const jahr=S.lyear&&(S.lyear==="alle"||jahre.includes(S.lyear))?S.lyear:"alle";
+  const alle=jahr==="alle"?roh:roh.filter(y=>(y.datum||"").startsWith(jahr));
   const cnt=g=>alle.filter(y=>statGrp(y.status)===g).length;
   const grp=alle.filter(y=>statGrp(y.status)===S.lms);
   const list=grp.filter(y=>S.lmf==="alle"||y.sex===S.lmf);
   const w=grp.filter(y=>y.sex==="w").length,m=grp.filter(y=>y.sex==="m").length;
   const badge=st=>{const c=st==="lebend"?"#3f7a2e":st==="verkauft"?"#b8862f":"#b23b2b";return `<span style="display:inline-block;background:${c};color:#fff;font-size:12px;font-weight:700;border-radius:6px;padding:2px 8px;margin-right:6px;vertical-align:2px">${esc(st.charAt(0).toUpperCase()+st.slice(1))}</span>`};
   const leer={lebend:"Keine lebenden Lämmer erfasst.<br>Lämmer trägst du beim Mutterschaf unter „+ Ablammung“ ein.",verkauft:"Noch keine verkauften Lämmer.",tot:"Keine verendeten oder tot geborenen Lämmer."}[S.lms];
-  return `<header><h1>🐣 Lämmer <small>${cnt("lebend")} lebend</small><button class="btn sec sm" id="dm">💾</button></h1>
+  return `<header><h1>🐣 Lämmer <small>${cnt("lebend")} lebend${jahr==="alle"?"":" · Jg. "+jahr}</small><button class="btn sec sm" id="dm">💾</button></h1>
     <div class="seg lmseg">${Object.entries(LSTAT).map(([k,[t]])=>`<button class="chip ${S.lms===k?"on":""}" data-ls="${k}">${t} (${cnt(k)})</button>`).join("")}</div>
     <div class="chips">${[["alle",`Alle (${grp.length})`],["w",`♀ weiblich (${w})`],["m",`♂ männlich (${m})`]].map(([k,t])=>`<button class="chip ${S.lmf===k?"on":""}" data-lf="${k}">${t}</button>`).join("")}</div></header><main>
+  <div class="yearbar"><span>📅 Geburtsjahrgang</span><select id="lyr"><option value="alle" ${jahr==="alle"?"selected":""}>Alle Jahre</option>${jahre.map(y=>`<option ${y===jahr?"selected":""}>${y}</option>`).join("")}</select></div>
   ${list.length?list.map(y=>`<div class="card ewe" data-lm="${esc(y.lid)}">
     <div class="tag ${y.sex==="m"?"fuchs":""}" style="font-size:22px">${y.sex==="m"?"♂":y.sex==="w"?"♀":"?"}</div>
     <div class="info"><div class="name">${badge(y.status)}${y.nr?esc(y.nr):"ohne Ohrmarke"} <span style="font-weight:400;color:var(--mute)">· ${y.sex==="m"?"männlich":y.sex==="w"?"weiblich":"Geschlecht offen"}</span></div>
@@ -387,7 +403,7 @@ function lmHTML(){
     ${y.bem?`<div class="med">${esc(y.bem)}</div>`:""}${em[y.id]?`<div class="med" style="color:var(--acc);font-weight:600">💶 Erlös ${eur(em[y.id].sum)} (${fmtD(em[y.id].fins[0].datum)})</div>`:""}</div></div>`).join(""):`<div class="empty">${grp.length?"Keine Treffer.":leer}</div>`}
   ${S.lms==="lebend"?`<div class="note">Tipp: Antippen öffnet die Ablammung – dort kannst du den Status z. B. auf „verkauft“ ändern, dann wandert das Lamm in den Reiter „Verkauft“.</div>`:""}
   </main>`}
-function bindLm(){
+function bindLm(){const ly=$("lyr");if(ly)ly.onchange=()=>{S.lyear=ly.value;render()};
   document.querySelectorAll("[data-ls]").forEach(b=>b.onclick=()=>{S.lms=b.dataset.ls;S.lmf="alle";render()});
   document.querySelectorAll("[data-lf]").forEach(b=>b.onclick=()=>{S.lmf=b.dataset.lf;render()});
   document.querySelectorAll("[data-lm]").forEach(b=>b.onclick=()=>{const l=S.lamm.find(x=>x.id===b.dataset.lm);const m=l&&S.schafe.find(x=>x.id===l.schafId);if(l&&m&&S.db)lammForm(m,l)});
@@ -722,14 +738,71 @@ function dataMenu(){
   <button class="btn sec" style="width:100%;margin-top:10px" id="csvs">🐑 Aktueller Mutterschaf-Bestand (CSV)</button>
   <button class="btn sec" style="width:100%;margin-top:10px" id="csv">📊 Schafe & Lämmer als Excel-Tabelle (CSV)</button>
   <button class="btn sec" style="width:100%;margin-top:10px" id="csvb">💊 Behandlungen als Excel-Tabelle (CSV)</button>
+  <button class="btn sec" style="width:100%;margin-top:22px" id="pwc">🔑 Passwort ändern</button>
+  <button class="btn sec" style="width:100%;margin-top:10px" id="lknow">🔒 Jetzt sperren</button>
   <div class="acts"><button class="btn sec" id="cx">Schließen</button></div>`);
+  $("pwc").onclick=()=>{closeSheet();showLock("change")};$("lknow").onclick=()=>{closeSheet();showLock(pwData()?"unlock":"setup")};
   $("ex").onclick=exportJSON;$("csv").onclick=exportCSV;$("csvb").onclick=exportBehCSV;$("csvs").onclick=exportBestandCSV;$("cx").onclick=closeSheet;
   $("im").onchange=e=>{if(e.target.files[0])importJSON(e.target.files[0])};
 }
 try{localStorage.setItem("__t","1");localStorage.removeItem("__t");S.db=localDb}catch(e){S.err="Dieser Browser erlaubt hier kein Speichern. Bitte die Datei in Chrome, Edge, Firefox oder Safari öffnen."}
 store=loadStore();S.loaded={s:true,l:true};
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
-refresh();
+/* ---------- Passwort-Sperre ---------- */
+const PWKEY="herdenbuch-pw";
+function sha256bytes(bytes){const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  let H=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const l=bytes.length,n=((l+9+63)>>6)<<6,m=new Uint8Array(n);m.set(bytes);m[l]=0x80;const bl=l*8;for(let i=0;i<8;i++)m[n-1-i]=(i<4?(bl>>>(8*i)):Math.floor(bl/2**32)>>>(8*(i-4)))&255;
+  const r=(x,k)=>(x>>>k)|(x<<(32-k)),W=new Array(64);
+  for(let o=0;o<n;o+=64){for(let i=0;i<16;i++)W[i]=(m[o+4*i]<<24)|(m[o+4*i+1]<<16)|(m[o+4*i+2]<<8)|m[o+4*i+3];
+    for(let i=16;i<64;i++){const s0=r(W[i-15],7)^r(W[i-15],18)^(W[i-15]>>>3),s1=r(W[i-2],17)^r(W[i-2],19)^(W[i-2]>>>10);W[i]=(W[i-16]+s0+W[i-7]+s1)|0}
+    let[a,b,c,d,e,f,g,h]=H;
+    for(let i=0;i<64;i++){const t1=(h+(r(e,6)^r(e,11)^r(e,25))+((e&f)^(~e&g))+K[i]+W[i])|0,t2=((r(a,2)^r(a,13)^r(a,22))+((a&b)^(a&c)^(b&c)))|0;h=g;g=f;f=e;e=(d+t1)|0;d=c;c=b;b=a;a=(t1+t2)|0}
+    H=H.map((v,i)=>(v+[a,b,c,d,e,f,g,h][i])|0)}
+  return H.map(v=>(v>>>0).toString(16).padStart(8,"0")).join("")}
+async function hashPw(pw,salt){const data=new TextEncoder().encode(salt+":"+pw);
+  try{if(window.crypto&&crypto.subtle){const buf=await crypto.subtle.digest("SHA-256",data);return[...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("")}}catch(e){}
+  return sha256bytes(data)}
+const pwData=()=>{try{return JSON.parse(localStorage.getItem(PWKEY))}catch(e){return null}};
+function showLock(mode){
+  let el=$("lock");if(!el){el=document.createElement("div");el.id="lock";document.body.appendChild(el)}
+  document.body.style.overflow="hidden";
+  const b=(store&&store.betrieb)||{};
+  const title={setup:"Passwort festlegen",unlock:"Anmelden",change:"Passwort ändern"}[mode];
+  el.innerHTML=`<form class="lockbox" id="lf" autocomplete="off">
+    <div style="font-size:48px;line-height:1">🐑</div>
+    <h2 style="border:0;justify-content:center;margin:6px 0 2px;font-size:22px">Herdenbuch</h2>
+    ${b.inhaber?`<div style="color:var(--mute);font-size:14px">${esc(b.inhaber)}${b.betriebsnr?" · "+esc(b.betriebsnr):""}</div>`:""}
+    <div style="font-weight:700;margin-top:16px">${title}</div>
+    ${mode==="setup"?`<div style="color:var(--mute);font-size:13px;margin-top:4px">Schützt die App auf diesem Gerät. Mindestens 4 Zeichen.</div>`:""}
+    ${mode==="change"?`<input type="password" id="pw0" placeholder="Aktuelles Passwort" autocomplete="current-password">`:""}
+    <input type="password" id="pw1" placeholder="${mode==="unlock"?"Passwort":"Neues Passwort"}" autocomplete="${mode==="unlock"?"current-password":"new-password"}">
+    ${mode!=="unlock"?`<input type="password" id="pw2" placeholder="Passwort wiederholen" autocomplete="new-password">`:""}
+    <div id="lerr" style="color:var(--danger);font-size:14px;min-height:20px;margin-top:8px"></div>
+    <button class="btn" style="width:100%">${mode==="unlock"?"🔓 Entsperren":"Speichern"}</button>
+    ${mode==="change"?`<button type="button" class="btn sec" id="lcx" style="width:100%;margin-top:8px">Abbrechen</button>`:""}
+    ${mode==="unlock"?`<button type="button" class="back" id="lfg" style="color:var(--mute)!important;margin-top:14px;font-weight:400;font-size:14px">Passwort vergessen?</button>`:""}
+  </form>`;
+  const err=t=>{$("lerr").textContent=t};
+  setTimeout(()=>{const i=$(mode==="change"?"pw0":"pw1");if(i)i.focus()},50);
+  if($("lcx"))$("lcx").onclick=unlock;
+  if($("lfg"))$("lfg").onclick=()=>{
+    $("lerr").innerHTML=`<div style="color:var(--ink);text-align:left;margin:6px 0">Das Passwort lässt sich nicht wiederherstellen. Du kannst nur die App auf diesem Gerät <b>komplett zurücksetzen</b> – dabei werden alle Daten hier gelöscht. Danach kannst du eine Sicherung (💾) wieder einlesen.</div><button type="button" class="btn del" id="lrs" style="width:100%">Alles löschen & zurücksetzen</button>`;
+    armDelete($("lrs"),()=>{try{localStorage.removeItem(KEY);localStorage.removeItem(PWKEY)}catch(e){}location.reload()})};
+  $("lf").onsubmit=async ev=>{ev.preventDefault();const p1=$("pw1").value;
+    if(mode==="unlock"){const d=pwData();if(d&&await hashPw(p1,d.salt)===d.hash)unlock();else{err("Falsches Passwort");$("pw1").value="";$("pw1").focus()}return}
+    if(mode==="change"){const d=pwData();if(!d||await hashPw($("pw0").value,d.salt)!==d.hash){err("Aktuelles Passwort ist falsch");return}}
+    if(p1.length<4){err("Mindestens 4 Zeichen");return}
+    if(p1!==$("pw2").value){err("Passwörter stimmen nicht überein");return}
+    const salt=newId()+newId();try{localStorage.setItem(PWKEY,JSON.stringify({salt,hash:await hashPw(p1,salt)}))}catch(e){err("Speichern nicht möglich");return}
+    unlock();toast(mode==="setup"?"Passwort festgelegt":"Passwort geändert")};
+}
+function unlock(){const el=$("lock");if(el)el.remove();document.body.style.overflow=""}
+function lockInit(){showLock(pwData()?"unlock":"setup")}
+let hiddenAt=0;
+document.addEventListener("visibilitychange",()=>{if(document.hidden)hiddenAt=Date.now();else if(hiddenAt&&Date.now()-hiddenAt>5*60*1000&&pwData()&&!$("lock"))showLock("unlock")});
+
+refresh();lockInit();
 </script>
 <script>if("serviceWorker" in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});</script>
 </body>
