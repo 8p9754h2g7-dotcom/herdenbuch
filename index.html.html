@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Herdenbuch</title>
+<meta name="theme-color" content="#2f6224">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Herdenbuch">
+<style>
+:root{
+  --bg:#f5f2ea;--card:#fffdf8;--ink:#2a2620;--mute:#776f62;--line:#e4ddcf;
+  --acc:#4a6b3a;--acc2:#b4652c;--danger:#a63a2a;--chip:#ece6d8;
+  --r:14px;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#1c1a17;--card:#262320;--ink:#efe9de;--mute:#a59d8f;--line:#3a3530;--acc:#8fb576;--acc2:#e09a5f;--danger:#e0705e;--chip:#332f2a}
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+h1{font-size:20px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+h1 small{font-weight:400;color:var(--mute);font-size:14px;margin-left:auto}
+.wrap{max-width:760px;margin:0 auto}
+main{padding:12px 16px 110px}
+input,select,textarea{width:100%;font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
+textarea{min-height:80px;resize:vertical}
+label{display:block;font-size:13px;color:var(--mute);margin:12px 0 4px}
+.row{display:flex;gap:10px}.row>*{flex:1;min-width:0}
+.chips{display:flex;gap:6px;overflow-x:auto;margin-top:8px;padding-bottom:2px}
+.chip{border:0;background:var(--chip);color:var(--ink);padding:7px 12px;border-radius:999px;font:inherit;font-size:14px;white-space:nowrap;cursor:pointer}
+.chip.on{background:var(--acc);color:#fff}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.ewe{display:flex;gap:12px;align-items:center;cursor:pointer}
+.ewe .tag{min-width:58px;height:58px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#fff;background:var(--acc);text-align:center;padding:4px;word-break:break-all}
+.ewe .tag.fuchs{background:var(--acc2)}
+.ewe .info{flex:1;min-width:0}
+.ewe .name{font-weight:600}
+.ewe .sub{color:var(--mute);font-size:14px}
+.warn{color:var(--danger);font-size:13px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{display:inline-block;font-size:12px;background:var(--chip);border-radius:6px;padding:2px 7px;margin-right:4px}
+.fab{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));background:var(--acc);color:#fff;border:0;border-radius:999px;padding:15px 22px;font:inherit;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer;z-index:6}
+.btn{border:0;border-radius:10px;padding:12px 16px;font:inherit;font-weight:600;cursor:pointer;background:var(--acc);color:#fff}
+.btn.sec{background:var(--chip);color:var(--ink)}
+.btn.del{background:transparent;color:var(--danger);border:1px solid var(--danger)}
+.btn.del.armed{background:var(--danger);color:#fff}
+.btn.sm{padding:8px 12px;font-size:14px}
+.empty{text-align:center;color:var(--mute);padding:40px 10px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}
+.stat{background:var(--chip);border-radius:10px;padding:10px 6px;text-align:center}
+.stat b{display:block;font-size:20px}.stat span{font-size:12px;color:var(--mute)}
+dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0}
+dt{color:var(--mute);font-size:14px}dd{margin:0}
+h2{font-size:17px;margin:18px 0 8px;display:flex;align-items:center;justify-content:space-between}
+.lamb{border-top:1px solid var(--line);padding:8px 0;font-size:15px}
+.lamb:first-child{border-top:0}
+.back{background:none;border:0;color:var(--acc);font:inherit;font-weight:600;padding:0;cursor:pointer}
+/* sheet */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:none;align-items:flex-end;justify-content:center}
+.ov.open{display:flex}
+.sheet{background:var(--bg);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+@media(min-width:700px){.ov{align-items:center}.sheet{border-radius:18px}}
+.sheet h3{margin:0 0 4px;font-size:18px}
+.acts{display:flex;gap:10px;margin-top:18px;position:sticky;bottom:-16px;background:var(--bg);padding:10px 0}
+.acts .btn{flex:1}
+.lambbox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px 12px 12px;margin-top:10px}
+.lambbox .hd{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-weight:600}
+.seg{display:flex;gap:6px}.seg .chip{flex:1;text-align:center}
+.note{background:var(--chip);border-radius:10px;padding:10px 12px;font-size:14px;color:var(--mute);margin-bottom:10px}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:7;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.tabbar button{flex:1;border:0;background:none;font:inherit;font-size:11px;color:var(--mute);padding:8px 0 9px;cursor:pointer}
+.tabbar button b{display:block;font-size:20px;line-height:1.2}
+.tabbar button.on{color:var(--acc);font-weight:600}
+.fab{bottom:calc(76px + env(safe-area-inset-bottom))!important}
+main{padding-bottom:170px!important}
+.ck{display:flex;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line);margin:0;color:var(--ink);font-size:15px;cursor:pointer}
+.ck input{width:22px;height:22px;flex:none}
+.chklist{max-height:300px;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:0 8px;margin-top:8px}
+.wz{display:inline-block;font-size:12px;background:var(--danger);color:#fff;border-radius:6px;padding:2px 7px}
+.med{color:var(--mute);font-size:13px;margin-top:2px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:150px;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:30;display:none}
+
+.yearbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:2px}
+.yearbar span{font-size:14px;color:var(--mute);font-weight:600}
+.yearbar select{width:auto;padding:7px 34px 7px 12px;font-weight:700;color:var(--acc-d);border:2px solid var(--acc);border-radius:999px}
+.lmseg{margin-top:10px}.lmseg .chip{font-size:13px;padding:8px 6px;font-weight:600}
+.finrow{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
+.finitem{display:flex;gap:10px;align-items:center;cursor:pointer;padding:12px}
+.finnr{min-width:34px;height:34px;border-radius:9px;background:var(--chip);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--mute)}
+.finitem .info{flex:1;min-width:0}.finitem .name{font-weight:600;font-size:15px}
+.finbetrag{font-weight:700;white-space:nowrap;font-size:15px}
+details.card summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between}
+details.card summary::after{content:"▾";color:var(--mute)}details[open].card summary::after{content:"▴"}
+.ftab{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px}.ftab th{text-align:left;color:var(--mute);font-weight:600;font-size:12px;padding:6px 4px;border-bottom:1px solid var(--line)}.ftab td{padding:8px 4px;border-bottom:1px solid var(--line)}.ftab tr[data-id]{cursor:pointer}.ftab td:last-child,.ftab th:last-child{text-align:right}
+/* ===== Design: Grünland ===== */
+:root{
+  --bg:#eef3e6;--card:#ffffff;--ink:#1f2d1a;--mute:#5f6f55;--line:#d5e0c8;
+  --acc:#3f7a2e;--acc-d:#2a5620;--acc2:#b8692f;--danger:#b23b2b;--chip:#e2ebd6;--hay:#e9d9a6;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#141b11;--card:#1d2719;--ink:#e8efe0;--mute:#9fb090;--line:#2f3d29;--acc:#7cb562;--acc-d:#2a4a20;--acc2:#e0995f;--chip:#28351f;--hay:#4a4126}
+}
+body{background:var(--bg) radial-gradient(circle at 20% 0,rgba(63,122,46,.06),transparent 60%) fixed}
+h1,h2,h3,.stat b{font-family:"Rockwell","Roboto Slab","Georgia","Cambria",serif;letter-spacing:.2px}
+header{background:linear-gradient(160deg,#4d8a37 0%,#2f6224 70%,#264f1d 100%);color:#fff;border-bottom:0;padding-bottom:18px;box-shadow:0 2px 10px rgba(30,60,20,.25)}
+header::after{content:"";position:absolute;left:0;right:0;bottom:-11px;height:12px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 12' preserveAspectRatio='none'%3E%3Cpath d='M0 0h120v4c-10 0-10 7-20 7S90 4 80 4 70 11 60 11 50 4 40 4 30 11 20 11 10 4 0 4z' fill='%23264f1d'/%3E%3C/svg%3E") repeat-x;background-size:120px 12px;pointer-events:none}
+header h1{color:#fff;font-size:22px}
+header h1 small{color:rgba(255,255,255,.8)}
+header .btn.sec{background:rgba(255,255,255,.18);color:#fff}
+header input{background:rgba(255,255,255,.95);border:0;color:#1f2d1a;box-shadow:inset 0 1px 3px rgba(0,0,0,.15)}
+header .chip{background:rgba(255,255,255,.16);color:#fff}
+header .chip.on{background:#fff;color:var(--acc-d);font-weight:600}
+.back{color:#fff!important}
+main{padding-top:22px}
+.card{border-radius:16px;border:1px solid var(--line);box-shadow:0 1px 3px rgba(40,70,30,.08)}
+.ewe .tag{background:linear-gradient(145deg,#5a9a42,#2f6224);box-shadow:inset 0 -2px 0 rgba(0,0,0,.15)}
+.ewe .tag.fuchs{background:linear-gradient(145deg,#cf8346,#9a5422)}
+.stats{gap:10px}
+.stat{background:var(--card);border:1px solid var(--line);border-top:4px solid var(--acc);border-radius:12px;box-shadow:0 1px 3px rgba(40,70,30,.08)}
+.stat b{color:var(--acc-d);font-size:22px}
+@media (prefers-color-scheme:dark){.stat b{color:var(--acc)}}
+h2{color:var(--acc-d);border-bottom:2px solid var(--hay);padding-bottom:6px}
+@media (prefers-color-scheme:dark){h2{color:var(--acc)}}
+.btn{background:var(--acc);box-shadow:0 2px 0 var(--acc-d)}
+.btn.sec{box-shadow:none}
+.btn.del{box-shadow:none}
+.chip.on{background:var(--acc)}
+.fab{background:linear-gradient(160deg,#4d8a37,#2f6224);box-shadow:0 6px 18px rgba(30,70,20,.35)}
+.tabbar{background:#264f1d;border-top:0;box-shadow:0 -2px 12px rgba(20,40,15,.25)}
+.tabbar button{color:rgba(255,255,255,.65)}
+.tabbar button.on{color:#fff}
+.tabbar button.on b{transform:scale(1.15)}
+.tabbar button b{transition:transform .15s}
+.note{background:#f6efd6;color:#6b5a2a;border-left:4px solid #d8bf6a}
+@media (prefers-color-scheme:dark){.note{background:var(--hay);color:#efe3b8}}
+.empty{background:var(--card);border:2px dashed var(--line);border-radius:16px}
+.sheet{background:var(--bg);border-top:5px solid var(--acc)}
+.sheet h3{color:var(--acc-d);font-size:20px}
+@media (prefers-color-scheme:dark){.sheet h3{color:var(--acc)}}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--acc);outline-offset:0;border-color:var(--acc)}
+.lambbox{border-left:4px solid var(--hay)}
+.toast{background:var(--acc-d);color:#fff}
+</style>
+</head>
+<body>
+<div id="app" class="wrap"></div>
+<div class="ov" id="ov"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const RASSEN=["Weißes Bergschaf","Coburger Fuchs","Kreuzung","Sonstige"];
+const S={fin:[],tab:"list",beh:[],tb:[],db:null,schafe:[],lamm:[],loaded:{s:false,l:false},err:null,view:"list",sel:null,q:"",filter:"alle",readonly:false};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtD=d=>{if(!d)return"–";const [y,m,t]=d.split("-");return t?`${t}.${m}.${y}`:d};
+function alter(geb){if(!geb)return"";const g=new Date(geb),n=new Date();let m=(n.getFullYear()-g.getFullYear())*12+(n.getMonth()-g.getMonth());if(n.getDate()<g.getDate())m--;if(m<0)return"";const j=Math.floor(m/12);return j>=1?`${j} J.${m%12?" "+(m%12)+" Mon.":""}`:`${m} Mon.`}
+function toast(t){const e=$("toast");e.textContent=t;e.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display="none",2200)}
+const kurzNr=n=>{n=String(n||"?").trim();const d=n.replace(/\s+/g,"");return d.length>6?d.slice(-5):n};
+const lammFor=id=>S.lamm.filter(l=>l.schafId===id).sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
+
+/* ---------- render ---------- */
+function render(){
+  const app=$("app");
+  if(S.view==="detail"&&S.sel){app.innerHTML=detailHTML();return}
+  if(S.view==="betrieb"){app.innerHTML=betriebHTML();bindBetrieb();return}
+  if(S.tab==="beh"){app.innerHTML=behHTML()+tabbar();bindBeh();bindTabs();return}
+  if(S.tab==="lm"){app.innerHTML=lmHTML()+tabbar();bindLm();bindTabs();return}
+  if(S.tab==="fin"){app.innerHTML=finHTML()+tabbar();bindFin();bindTabs();return}
+  if(S.tab==="tb"){app.innerHTML=tbHTML()+tabbar();bindTb();bindTabs();return}
+  const loading=!(S.loaded.s&&S.loaded.l);
+  let list=S.schafe.slice();
+  if(S.filter==="aktiv")list=list.filter(s=>s.status!=="abgegangen");
+  else if(S.filter==="abgegangen")list=list.filter(s=>s.status==="abgegangen");
+  else if(RASSEN.includes(S.filter))list=list.filter(s=>s.rasse===S.filter&&s.status!=="abgegangen");
+  if(S.filter==="alle")list=list.filter(s=>s.status!=="abgegangen");
+  const q=S.q.trim().toLowerCase();
+  if(q)list=list.filter(s=>[s.nr,s.name,s.zuechter,s.auff,s.rasse].join(" ").toLowerCase().includes(q));
+  list.sort((a,b)=>String(a.nr||"").localeCompare(String(b.nr||""),"de",{numeric:true}));
+  const aktiv=S.schafe.filter(s=>s.status!=="abgegangen").length;
+  const cur=new Date().getFullYear()+"";
+  const jahre=[...new Set([cur,...S.lamm.map(l=>(l.datum||"").slice(0,4)).filter(y=>/^\d{4}$/.test(y))])].sort().reverse();
+  const jahr=jahre.includes(S.year)?S.year:cur;
+  const lj=S.lamm.filter(l=>(l.datum||"").startsWith(jahr));
+  const lzahl=lj.reduce((n,l)=>n+(l.laemmer||[]).length,0);
+  app.innerHTML=`
+  <header>
+    <h1>🐑 Herdenbuch <small>${aktiv} Mutterschafe</small><button class="btn sec sm" id="bt" title="Betrieb">🏡</button><button class="btn sec sm" id="dm" title="Sichern / Einlesen">💾</button></h1>
+    <input id="q" type="search" placeholder="Suche: Ohrmarke, Name, Züchter …" value="${esc(S.q)}">
+    <div class="chips">${["alle",...RASSEN.slice(0,2),"abgegangen"].map(f=>`<button class="chip ${S.filter===f?"on":""}" data-f="${esc(f)}">${f==="alle"?"Alle aktiven":esc(f)}</button>`).join("")}</div>
+  </header>
+  <main>
+    ${S.err?`<div class="note">${esc(S.err)}</div>`:""}
+    ${S.readonly?`<div class="note">Nur Ansicht – du kannst hier nichts ändern.</div>`:""}
+    <div class="yearbar"><span>📅 Ablammungen im Jahr</span><select id="yr">${jahre.map(y=>`<option ${y===jahr?"selected":""}>${y}</option>`).join("")}</select></div>
+    <div class="stats">
+      <div class="stat"><b>${aktiv}</b><span>aktiv</span></div>
+      <div class="stat"><b>${lj.length}</b><span>Ablamm. ${jahr}</span></div>
+      <div class="stat"><b>${lzahl}</b><span>Lämmer ${jahr}</span></div>
+      <div class="stat"><b>${lj.length?(lzahl/lj.length).toFixed(2).replace(".",","):"–"}</b><span>Ø/Ablamm.</span></div>
+    </div>
+    ${loading&&!S.err?`<div class="empty">Daten werden geladen …</div>`:
+      list.length?list.map(eweCard).join(""):`<div class="empty">${S.schafe.length?"Keine Treffer.":"Noch keine Mutterschafe erfasst.<br>Tippe unten auf „+ Mutterschaf“."}</div>`}
+  </main>
+  ${S.readonly||!S.db?"":`<button class="fab" id="add">+ Mutterschaf</button>`}`+tabbar();bindTabs();
+  const qi=$("q");qi.oninput=e=>{S.q=e.target.value;const p=qi.selectionStart;render();const n=$("q");n.focus();n.setSelectionRange(p,p)};
+  app.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{S.filter=b.dataset.f;render()});
+  app.querySelectorAll("[data-id]").forEach(b=>b.onclick=()=>{S.sel=b.dataset.id;S.view="detail";render();scrollTo(0,0)});
+  const a=$("add");if(a)a.onclick=()=>eweForm();const bt=$("bt");if(bt)bt.onclick=()=>{S.view="betrieb";render();scrollTo(0,0)};const yr=$("yr");if(yr)yr.onchange=()=>{S.year=yr.value;render()};const dm=$("dm");if(dm)dm.onclick=dataMenu;
+}
+function eweCard(s){
+  const l=lammFor(s.id),n=l.reduce((k,x)=>k+(x.laemmer||[]).length,0);
+  return `<div class="card ewe" data-id="${esc(s.id)}">
+    <div class="tag ${s.rasse==="Coburger Fuchs"?"fuchs":""}">${esc(kurzNr(s.nr))}</div>
+    <div class="info">
+      <div class="name">${esc(s.nr||"?")} ${s.status==="abgegangen"?'<span class="badge">abgegangen</span>':""}</div>
+      <div class="sub">${esc(s.rasse||"")}${s.geb?" · "+alter(s.geb):""} · ${l.length} Ablamm. / ${n} Lämmer</div>
+      ${s.auff?`<div class="warn">⚠ ${esc(s.auff)}</div>`:""}
+      ${(()=>{const b=behFor(s.id)[0];return b?`<div class="med">💊 ${fmtD(b.datum)} · ${esc(b.medikament)} ${wzBadge(b)}</div>`:""})()}
+    </div></div>`;
+}
+function detailHTML(){
+  const s=S.schafe.find(x=>x.id===S.sel);
+  if(!s){S.view="list";setTimeout(render);return""}
+  const l=lammFor(s.id),n=l.reduce((k,x)=>k+(x.laemmer||[]).length,0);
+  const leb=l.reduce((k,x)=>k+(x.laemmer||[]).filter(y=>y.status==="lebend").length,0);
+  const ro=S.readonly||!S.db;
+  setTimeout(()=>{
+    $("bk").onclick=()=>{S.view="list";render()};
+    const e=$("ed");if(e)e.onclick=()=>eweForm(s);
+    const a=$("al");if(a)a.onclick=()=>lammForm(s);
+    const ab=$("ab");if(ab)ab.onclick=()=>behForm(null,s.id);
+    document.querySelectorAll("[data-b]").forEach(x=>x.onclick=()=>behForm(S.beh.find(y=>y.id===x.dataset.b)));
+    document.querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>lammForm(s,S.lamm.find(x=>x.id===b.dataset.l)));
+  });
+  return `<header><button class="back" id="bk">‹ Zurück</button>
+    <h1 style="margin:8px 0 0">${esc(s.nr||"?")}</h1></header>
+  <main>
+    <div class="stats">
+      <div class="stat"><b>${l.length}</b><span>Ablamm.</span></div>
+      <div class="stat"><b>${n}</b><span>Lämmer</span></div>
+      <div class="stat"><b>${leb}</b><span>lebend</span></div>
+      <div class="stat"><b>${l.length?(n/l.length).toFixed(1).replace(".",","):"–"}</b><span>Ø Lämmer</span></div>
+    </div>
+    ${(()=>{const e=erloesSchaf(s.id),kp=Number(s.kaufpreis)||0;if(!kp)return"";return `<div class="card"><div class="finrow"><span>🛒 Kaufpreis</span><b style="color:var(--danger)">− ${eur(kp)}</b></div><div class="finrow"><span>💶 Erlöse aus Lämmern (${e.n})</span><b style="color:var(--acc)">+ ${eur(e.sum)}</b></div><div class="finrow" style="border:0"><b>Bilanz</b><b style="color:${e.sum-kp>=0?"var(--acc)":"var(--danger)"}">${eur(e.sum-kp)}</b></div></div>`})()}
+    ${(()=>{const e=erloesSchaf(s.id);return e.n&&!(Number(s.kaufpreis)>0)?`<div class="card" style="display:flex;justify-content:space-between;align-items:center"><span>💶 Erlöse aus Lämmern<br><span style="color:var(--mute);font-size:13px">${e.n} ${e.n===1?"Lamm":"Lämmer"} verkauft (zugeordnet)</span></span><b style="color:var(--acc);font-size:18px">${eur(e.sum)}</b></div>`:""})()}
+    <h2>Stammdaten ${ro?"":`<button class="btn sec sm" id="ed">Bearbeiten</button>`}</h2>
+    <div class="card"><dl>
+      <dt>Ohrmarke</dt><dd>${esc(s.nr||"–")}</dd>
+      <dt>Rasse</dt><dd>${esc(s.rasse||"–")}</dd>
+      <dt>Geboren</dt><dd>${fmtD(s.geb)}${s.geb?` (${alter(s.geb)})`:""}</dd>
+      <dt>Herkunft</dt><dd>${esc(s.herkunft||"–")}</dd>
+      <dt>Züchter</dt><dd>${esc(s.zuechter||"–")}</dd>
+      <dt>Zugang am</dt><dd>${fmtD(s.zugang)}</dd>
+      <dt>Kaufpreis</dt><dd>${Number(s.kaufpreis)>0?eur(s.kaufpreis):"–"}</dd>
+      <dt>Vater</dt><dd>${esc(s.vater||"–")}</dd>
+      <dt>Status</dt><dd>${s.status==="abgegangen"?"abgegangen"+(s.abgang?" am "+fmtD(s.abgang):"")+(s.abgangGrund?" – "+esc(s.abgangGrund):""):"aktiv"}</dd>
+    </dl></div>
+    ${s.auff?`<div class="card"><b style="color:var(--danger)">⚠ Auffälligkeiten</b><div style="white-space:pre-wrap;margin-top:4px">${esc(s.auff)}</div></div>`:""}
+    ${s.notiz?`<div class="card"><b>Notizen</b><div style="white-space:pre-wrap;margin-top:4px">${esc(s.notiz)}</div></div>`:""}
+    <h2>Ablammungen ${ro?"":`<button class="btn sm" id="al">+ Ablammung</button>`}</h2>
+    ${l.length?l.map(x=>`<div class="card" ${ro?"":`data-l="${esc(x.id)}" style="cursor:pointer"`}>
+      <div style="display:flex;justify-content:space-between;font-weight:600"><span>${fmtD(x.datum)}</span><span>${(x.laemmer||[]).length} ${(x.laemmer||[]).length===1?"Lamm":"Lämmer"}</span></div>
+      <div class="sub" style="color:var(--mute);font-size:14px">${x.bock?"Bock: "+esc(x.bock)+" · ":""}${esc(x.verlauf||"")}</div>
+      ${(x.laemmer||[]).map(y=>`<div class="lamb">${y.sex==="m"?"♂ männlich":y.sex==="w"?"♀ weiblich":"?"}${y.nr?" · "+esc(y.nr):""}${y.gewicht?" · "+esc(y.gewicht)+" kg":""} · <span style="color:${y.status==="lebend"?"var(--acc)":"var(--danger)"}">${esc(y.status||"")}</span>${y.bem?`<div style="color:var(--mute);font-size:13px">${esc(y.bem)}</div>`:""}</div>`).join("")}
+      ${x.notiz?`<div style="color:var(--mute);font-size:14px;margin-top:6px;white-space:pre-wrap">${esc(x.notiz)}</div>`:""}
+    </div>`).join(""):`<div class="empty">Noch keine Ablammung erfasst.</div>`}
+    <h2>Behandlungen ${ro?"":`<button class="btn sm" id="ab">+ Behandlung</button>`}</h2>
+    ${(()=>{const bs=behFor(s.id);return bs.length?bs.map(behCard).join(""):`<div class="empty">Noch keine Behandlung erfasst.</div>`})()}
+  </main>`;
+}
+
+/* ---------- Behandlungen & Stallbuch ---------- */
+const today=()=>new Date().toISOString().slice(0,10);
+function vor(d){if(!d)return"";const n=Math.round((new Date(today())-new Date(d))/864e5);return n<0?"in "+(-n)+" Tagen":n===0?"heute":n===1?"gestern":`vor ${n} Tagen`}
+const behFor=id=>S.beh.filter(b=>(b.schafIds||[]).includes(id)).sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
+const wzBadge=b=>b.wartezeit&&b.wartezeit>=today()?`<span class="wz">Wartezeit bis ${fmtD(b.wartezeit)}</span>`:"";
+const schafName=id=>{const s=S.schafe.find(x=>x.id===id);return s?(s.nr+(s.name?" "+s.name:"")):"(gelöscht)"};
+function tierText(b){const n=(b.schafIds||[]).length;return b.alle?`alle Mutterschafe (${n})`:n<=3?(b.schafIds||[]).map(schafName).map(esc).join(", "):`${n} Mutterschafe`}
+function behCard(b){return `<div class="card" ${S.db?`data-b="${esc(b.id)}" style="cursor:pointer"`:""}>
+  <div style="display:flex;justify-content:space-between;gap:8px;font-weight:600"><span>${esc(b.medikament)}</span><span>${fmtD(b.datum)}</span></div>
+  <div style="color:var(--mute);font-size:14px">${tierText(b)}${b.grund?" · "+esc(b.grund):""}${b.dosis?" · "+esc(b.dosis):""}${b.von?" · "+esc(b.von):""}</div>
+  ${wzBadge(b)}${b.notiz?`<div style="color:var(--mute);font-size:14px;margin-top:4px;white-space:pre-wrap">${esc(b.notiz)}</div>`:""}</div>`}
+function tabbar(){return `<nav class="tabbar">${[["list","🐑","Schafe"],["lm","🐣","Lämmer"],["beh","💊","Behandlung"],["tb","🧹","Stallbuch"],["fin","💶","Finanzen"]].map(([k,i,t])=>`<button data-tab="${k}" class="${(S.tab||"list")===k?"on":""}"><b>${i}</b>${t}</button>`).join("")}</nav>`}
+function bindTabs(){document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;S.view="list";render();scrollTo(0,0)});const dm=$("dm");if(dm)dm.onclick=dataMenu}
+function behHTML(){
+  const all=S.beh.slice().sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
+  const last={};for(const b of all){const k=(b.medikament||"").trim().toLowerCase();if(k&&!last[k])last[k]=b}
+  return `<header><h1>💊 Behandlungen <small>${all.length} Einträge</small><button class="btn sec sm" id="dm">💾</button></h1></header><main>
+  ${Object.keys(last).length?`<h2>Zuletzt je Medikament</h2><div class="card">${Object.values(last).map(b=>`<div class="lamb" data-b="${esc(b.id)}" style="cursor:pointer"><b>${esc(b.medikament)}</b> – ${fmtD(b.datum)} <span style="color:var(--mute)">(${vor(b.datum)})</span><div style="color:var(--mute);font-size:13px">${tierText(b)}</div>${wzBadge(b)}</div>`).join("")}</div>`:""}
+  <h2>Alle Behandlungen</h2>
+  ${all.length?all.map(behCard).join(""):`<div class="empty">Noch keine Behandlung erfasst.<br>Tippe auf „+ Behandlung“.</div>`}
+  </main>${S.db?`<button class="fab" id="addb">+ Behandlung</button>`:""}`}
+function bindBeh(){const a=$("addb");if(a)a.onclick=()=>behForm();document.querySelectorAll("[data-b]").forEach(x=>x.onclick=()=>behForm(S.beh.find(y=>y.id===x.dataset.b)))}
+const TB_VORSCHLAG=["Stall ausmisten","Einstreuen","Klauenpflege","Schur","Zaun kontrolliert","Tränken gereinigt","Futter gekauft","Weidewechsel","Tierarzt-Besuch"];
+function tbHTML(){
+  const all=S.tb.slice().sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
+  const last={};for(const e of all){const k=(e.taetigkeit||"").trim().toLowerCase();if(k&&!last[k])last[k]=e}
+  return `<header><h1>🧹 Stallbuch <small>${all.length} Einträge</small><button class="btn sec sm" id="dm">💾</button></h1></header><main>
+  ${Object.keys(last).length?`<h2>Zuletzt erledigt</h2><div class="card">${Object.values(last).map(e=>`<div class="lamb" style="display:flex;justify-content:space-between;gap:8px"><b>${esc(e.taetigkeit)}</b><span style="color:var(--mute)">${fmtD(e.datum)} · ${vor(e.datum)}</span></div>`).join("")}</div>`:""}
+  <h2>Alle Einträge</h2>
+  ${all.length?all.map(e=>`<div class="card" data-t="${esc(e.id)}" style="cursor:pointer"><div style="display:flex;justify-content:space-between;font-weight:600"><span>${esc(e.taetigkeit)}</span><span>${fmtD(e.datum)}</span></div>${e.notiz?`<div style="color:var(--mute);font-size:14px;white-space:pre-wrap">${esc(e.notiz)}</div>`:""}</div>`).join(""):`<div class="empty">Noch keine Einträge.<br>z. B. „Stall ausmisten“ – tippe auf „+ Eintrag“.</div>`}
+  </main>${S.db?`<button class="fab" id="addt">+ Eintrag</button>`:""}`}
+function bindTb(){const a=$("addt");if(a)a.onclick=()=>tbForm();document.querySelectorAll("[data-t]").forEach(x=>x.onclick=()=>tbForm(S.tb.find(y=>y.id===x.dataset.t)))}
+function tbForm(e){
+  e=e||{datum:today()};
+  const vs=[...new Set([...TB_VORSCHLAG,...S.tb.map(x=>x.taetigkeit).filter(Boolean)])];
+  openSheet(`<h3>${e.id?"Eintrag bearbeiten":"Neuer Stallbuch-Eintrag"}</h3><form id="f">
+    <label>Datum *</label><input type="date" name="datum" required value="${esc(e.datum)}">
+    <label>Tätigkeit *</label><input name="taetigkeit" required list="tbl" value="${esc(e.taetigkeit)}" placeholder="z. B. Stall ausmisten"><datalist id="tbl">${vs.map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
+    <div class="chips">${TB_VORSCHLAG.slice(0,6).map(v=>`<button type="button" class="chip" data-v="${esc(v)}">${esc(v)}</button>`).join("")}</div>
+    <label>Notiz</label><textarea name="notiz">${esc(e.notiz)}</textarea>
+    <div class="acts">${e.id?`<button type="button" class="btn del" id="del">Löschen</button>`:""}<button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div></form>`);
+  document.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{document.querySelector("[name=taetigkeit]").value=b.dataset.v});
+  $("cx").onclick=closeSheet;
+  if(e.id)armDelete($("del"),async()=>{try{await S.db.doc("stallbuch/"+e.id).delete();closeSheet();toast("Gelöscht")}catch(x){fail(x)}});
+  $("f").onsubmit=async ev=>{ev.preventDefault();const d=Object.fromEntries(new FormData(ev.target));for(const k in d)d[k]=String(d[k]).trim();d.geaendert=new Date().toISOString();
+    try{if(e.id)await S.db.doc("stallbuch/"+e.id).set(d);else await S.db.collection("stallbuch").add(d);closeSheet();toast("Gespeichert")}catch(x){fail(x)}};
+}
+function behForm(b,pre){
+  const aktive=S.schafe.filter(s=>s.status!=="abgegangen").sort((a,c)=>String(a.nr||"").localeCompare(String(c.nr||""),"de",{numeric:true}));
+  b=b||{datum:today(),alle:false,schafIds:pre?[pre]:[]};
+  const sel=new Set(b.schafIds||[]);let alle=!!b.alle,q="";
+  const meds=[...new Set(S.beh.map(x=>x.medikament).filter(Boolean))];
+  openSheet(`<h3>${b.id?"Behandlung bearbeiten":"Neue Behandlung"}</h3><form id="f">
+    <div class="row"><div><label>Datum *</label><input type="date" name="datum" required value="${esc(b.datum)}"></div>
+    <div><label>Wartezeit bis</label><input type="date" name="wartezeit" value="${esc(b.wartezeit)}"></div></div>
+    <label>Medikament *</label><input name="medikament" required list="ml" value="${esc(b.medikament)}" placeholder="z. B. Entwurmungsmittel"><datalist id="ml">${meds.map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
+    <div class="row"><div><label>Grund / Diagnose</label><input name="grund" value="${esc(b.grund)}" placeholder="z. B. Entwurmung"></div>
+    <div><label>Dosis / Menge</label><input name="dosis" value="${esc(b.dosis)}" placeholder="z. B. 5 ml oral"></div></div>
+    <div class="row"><div><label>Behandelt von</label><input name="von" value="${esc(b.von)}" placeholder="selbst / Tierarzt"></div>
+    <div><label>Charge / Beleg-Nr.</label><input name="charge" value="${esc(b.charge)}"></div></div>
+    <label>Welche Tiere?</label>
+    <div class="seg"><button type="button" class="chip" id="mAll">Alle aktiven (${aktive.length})</button><button type="button" class="chip" id="mEin">Einzelne auswählen</button></div>
+    <div id="tl"></div>
+    <label>Notiz</label><textarea name="notiz">${esc(b.notiz)}</textarea>
+    <div class="acts">${b.id?`<button type="button" class="btn del" id="del">Löschen</button>`:""}<button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div></form>`);
+  const drawT=()=>{
+    $("mAll").classList.toggle("on",alle);$("mEin").classList.toggle("on",!alle);
+    if(alle){$("tl").innerHTML=`<div class="note" style="margin-top:8px">Wird bei allen ${aktive.length} aktiven Mutterschafen eingetragen.</div>`;return}
+    const extra=[...sel].filter(id=>!aktive.some(a=>a.id===id)).map(id=>S.schafe.find(x=>x.id===id)).filter(Boolean);
+    const list=[...aktive,...extra].filter(s=>!q||[s.nr,s.name].join(" ").toLowerCase().includes(q));
+    $("tl").innerHTML=`<div class="row" style="margin-top:8px;align-items:center"><input id="tq" type="search" placeholder="Tier suchen …" value="${esc(q)}"><div style="flex:none;color:var(--mute);font-size:14px">${sel.size} gewählt</div></div>
+      <div class="chklist">${list.map(s=>`<label class="ck"><input type="checkbox" data-s="${esc(s.id)}" ${sel.has(s.id)?"checked":""}><span><b>${esc(s.nr)}</b> ${esc(s.name||"")} <span style="color:var(--mute);font-size:13px">${esc(s.rasse||"")}</span></span></label>`).join("")||`<div class="empty" style="padding:16px">Keine Tiere gefunden.</div>`}</div>`;
+    const tq=$("tq");tq.oninput=()=>{q=tq.value.toLowerCase();const p=tq.selectionStart;drawT();const n=$("tq");n.focus();n.setSelectionRange(p,p)};
+    document.querySelectorAll("[data-s]").forEach(c=>c.onchange=()=>{c.checked?sel.add(c.dataset.s):sel.delete(c.dataset.s);drawT()});
+  };
+  $("mAll").onclick=()=>{alle=true;drawT()};$("mEin").onclick=()=>{alle=false;drawT()};drawT();
+  $("cx").onclick=closeSheet;
+  if(b.id)armDelete($("del"),async()=>{try{await S.db.doc("behandlungen/"+b.id).delete();closeSheet();toast("Gelöscht")}catch(x){fail(x)}});
+  $("f").onsubmit=async ev=>{ev.preventDefault();const d=Object.fromEntries(new FormData(ev.target));for(const k in d)d[k]=String(d[k]).trim();
+    d.alle=alle;d.schafIds=alle?aktive.map(s=>s.id):[...sel];
+    if(!d.schafIds.length){toast("Bitte mindestens ein Tier auswählen");return}
+    d.geaendert=new Date().toISOString();
+    try{if(b.id)await S.db.doc("behandlungen/"+b.id).set(d);else await S.db.collection("behandlungen").add(d);closeSheet();toast("Gespeichert")}catch(x){fail(x)}};
+}
+
+function lammAlter(d){if(!d)return"–";const t=Math.round((new Date(today())-new Date(d))/864e5);if(t<0)return"–";if(t<28)return t===1?"1 Tag":`${t} Tage`;if(t<91)return`${Math.floor(t/7)} Wochen`;const a=alter(d);return a}
+const LSTAT={lebend:["Lebend","#3f7a2e"],verkauft:["Verkauft","#b8862f"],tot:["Verendet / tot geb.","#b23b2b"]};
+const statGrp=st=>st==="verkauft"?"verkauft":(st==="verendet"||st==="tot geboren")?"tot":"lebend";
+function alleLaemmer(){const out=[];for(const l of S.lamm)(l.laemmer||[]).forEach((y,i)=>{const m=S.schafe.find(x=>x.id===l.schafId);out.push({...y,id:y.id||l.id+"_"+i,status:y.status||"lebend",i,datum:l.datum,lid:l.id,mutter:m,bock:l.bock})});return out.sort((a,b)=>(b.datum||"").localeCompare(a.datum||""))}
+function erloesMap(jahr){const m={};for(const f of S.fin){if(f.art!=="ein"||!(f.lammIds||[]).length)continue;if(jahr&&!(f.datum||"").startsWith(jahr))continue;const sh=(Number(f.betrag)||0)/f.lammIds.length;for(const id of f.lammIds){(m[id]=m[id]||{sum:0,fins:[]}).sum+=sh;m[id].fins.push(f)}}return m}
+function erloesSchaf(sid,jahr){const m=erloesMap(jahr);let sum=0,n=0;for(const l of S.lamm.filter(x=>x.schafId===sid))(l.laemmer||[]).forEach((y,i)=>{const e=m[y.id||l.id+"_"+i];if(e){sum+=e.sum;n++}});return{sum,n}}
+function lammLabel(y){return `${y.nr?esc(y.nr):"ohne Ohrmarke"} · ${y.sex==="m"?"♂":y.sex==="w"?"♀":"?"} · Mutter ${y.mutter?esc(y.mutter.nr):"?"} · geb. ${fmtD(y.datum)}`}
+function lebendeLaemmer(){return alleLaemmer().filter(y=>y.status==="lebend")}
+function lmHTML(){
+  const alle=alleLaemmer(),em=erloesMap();S.lmf=S.lmf||"alle";S.lms=S.lms||"lebend";
+  const cnt=g=>alle.filter(y=>statGrp(y.status)===g).length;
+  const grp=alle.filter(y=>statGrp(y.status)===S.lms);
+  const list=grp.filter(y=>S.lmf==="alle"||y.sex===S.lmf);
+  const w=grp.filter(y=>y.sex==="w").length,m=grp.filter(y=>y.sex==="m").length;
+  const badge=st=>{const c=st==="lebend"?"#3f7a2e":st==="verkauft"?"#b8862f":"#b23b2b";return `<span style="display:inline-block;background:${c};color:#fff;font-size:12px;font-weight:700;border-radius:6px;padding:2px 8px;margin-right:6px;vertical-align:2px">${esc(st.charAt(0).toUpperCase()+st.slice(1))}</span>`};
+  const leer={lebend:"Keine lebenden Lämmer erfasst.<br>Lämmer trägst du beim Mutterschaf unter „+ Ablammung“ ein.",verkauft:"Noch keine verkauften Lämmer.",tot:"Keine verendeten oder tot geborenen Lämmer."}[S.lms];
+  return `<header><h1>🐣 Lämmer <small>${cnt("lebend")} lebend</small><button class="btn sec sm" id="dm">💾</button></h1>
+    <div class="seg lmseg">${Object.entries(LSTAT).map(([k,[t]])=>`<button class="chip ${S.lms===k?"on":""}" data-ls="${k}">${t} (${cnt(k)})</button>`).join("")}</div>
+    <div class="chips">${[["alle",`Alle (${grp.length})`],["w",`♀ weiblich (${w})`],["m",`♂ männlich (${m})`]].map(([k,t])=>`<button class="chip ${S.lmf===k?"on":""}" data-lf="${k}">${t}</button>`).join("")}</div></header><main>
+  ${list.length?list.map(y=>`<div class="card ewe" data-lm="${esc(y.lid)}">
+    <div class="tag ${y.sex==="m"?"fuchs":""}" style="font-size:22px">${y.sex==="m"?"♂":y.sex==="w"?"♀":"?"}</div>
+    <div class="info"><div class="name">${badge(y.status)}${y.nr?esc(y.nr):"ohne Ohrmarke"} <span style="font-weight:400;color:var(--mute)">· ${y.sex==="m"?"männlich":y.sex==="w"?"weiblich":"Geschlecht offen"}</span></div>
+    <div class="sub">${y.status==="lebend"?`<b style="color:var(--ink)">${lammAlter(y.datum)}</b> · `:""}geb. ${fmtD(y.datum)}${y.gewicht?" · "+esc(y.gewicht)+" kg":""}</div>
+    <div class="sub">Mutter: ${y.mutter?esc(y.mutter.nr+(y.mutter.name?" "+y.mutter.name:"")):"(gelöscht)"}${y.bock?" · Vater: "+esc(y.bock):""}</div>
+    ${y.bem?`<div class="med">${esc(y.bem)}</div>`:""}${em[y.id]?`<div class="med" style="color:var(--acc);font-weight:600">💶 Erlös ${eur(em[y.id].sum)} (${fmtD(em[y.id].fins[0].datum)})</div>`:""}</div></div>`).join(""):`<div class="empty">${grp.length?"Keine Treffer.":leer}</div>`}
+  ${S.lms==="lebend"?`<div class="note">Tipp: Antippen öffnet die Ablammung – dort kannst du den Status z. B. auf „verkauft“ ändern, dann wandert das Lamm in den Reiter „Verkauft“.</div>`:""}
+  </main>`}
+function bindLm(){
+  document.querySelectorAll("[data-ls]").forEach(b=>b.onclick=()=>{S.lms=b.dataset.ls;S.lmf="alle";render()});
+  document.querySelectorAll("[data-lf]").forEach(b=>b.onclick=()=>{S.lmf=b.dataset.lf;render()});
+  document.querySelectorAll("[data-lm]").forEach(b=>b.onclick=()=>{const l=S.lamm.find(x=>x.id===b.dataset.lm);const m=l&&S.schafe.find(x=>x.id===l.schafId);if(l&&m&&S.db)lammForm(m,l)});
+}
+
+/* ---------- Betrieb ---------- */
+const BETRIEB_FELDER=[["betriebsnr","Betriebsnummer"],["inhaber","Betriebsinhaber / Name"],["strasse","Straße"],["plz","PLZ"],["ort","Ort"],["tel","Telefon"],["fax","Fax"],["mobil","Mobil"],["email","E-Mail"],["tierarzt","Hoftierarzt"],["tierarztTel","Tierarzt Telefon"],["notiz","Notizen (z. B. Tierseuchenkasse, Verband)"]];
+const betrieb=()=>store.betrieb||{};
+function betriebHTML(){
+  const b=betrieb(),v=k=>b[k]?esc(b[k]):"–";
+  const tl=k=>b[k]?`<a href="tel:${esc(b[k].replace(/[^\d+]/g,""))}" style="color:var(--acc);font-weight:600">${esc(b[k])}</a>`:"–";
+  return `<header><button class="back" id="bk">‹ Zurück</button><h1 style="margin:8px 0 0">🏡 Betrieb</h1></header><main>
+  <div class="card" style="text-align:center;padding:18px">
+    <div style="color:var(--mute);font-size:13px;font-weight:600">BETRIEBSNUMMER</div>
+    <div style="font-family:Rockwell,'Roboto Slab',Georgia,serif;font-size:26px;font-weight:700;color:var(--acc-d);letter-spacing:1px">${v("betriebsnr")}</div></div>
+  <h2>Anschrift ${S.db?`<button class="btn sec sm" id="be">Bearbeiten</button>`:""}</h2>
+  <div class="card"><div style="font-weight:600">${v("inhaber")}</div><div>${v("strasse")}</div><div>${esc(b.plz||"")} ${esc(b.ort||"")}</div></div>
+  <h2>Kontakt</h2>
+  <div class="card"><dl><dt>Telefon</dt><dd>${tl("tel")}</dd><dt>Fax</dt><dd>${v("fax")}</dd><dt>Mobil</dt><dd>${tl("mobil")}</dd>
+    <dt>E-Mail</dt><dd style="word-break:break-all">${b.email?`<a href="mailto:${esc(b.email)}" style="color:var(--acc);font-weight:600">${esc(b.email)}</a>`:"–"}</dd></dl></div>
+  <h2>Tierarzt</h2>
+  <div class="card"><dl><dt>Hoftierarzt</dt><dd>${v("tierarzt")}</dd><dt>Telefon</dt><dd>${tl("tierarztTel")}</dd></dl></div>
+  ${b.notiz?`<h2>Notizen</h2><div class="card" style="white-space:pre-wrap">${esc(b.notiz)}</div>`:""}
+  </main>`}
+function bindBetrieb(){$("bk").onclick=()=>{S.view="list";render()};const e=$("be");if(e)e.onclick=betriebForm}
+function betriebForm(){
+  const b=betrieb();
+  openSheet(`<h3>Betriebsdaten bearbeiten</h3><form id="f">
+    ${BETRIEB_FELDER.map(([k,t])=>k==="notiz"?`<label>${t}</label><textarea name="${k}">${esc(b[k])}</textarea>`:
+      `<label>${t}</label><input name="${k}" value="${esc(b[k])}" ${k==="email"?'type="email"':""} ${/tel|fax|mobil|plz|betriebsnr/i.test(k)?'inputmode="tel"':""}>`).join("")}
+    <div class="acts"><button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div></form>`);
+  $("cx").onclick=closeSheet;
+  $("f").onsubmit=ev=>{ev.preventDefault();const d=Object.fromEntries(new FormData(ev.target));for(const k in d)d[k]=String(d[k]).trim();d.geaendert=new Date().toISOString();
+    try{store.betrieb=d;saveStore();closeSheet();refresh();toast("Gespeichert")}catch(x){fail(x)}};
+}
+
+/* ---------- Finanzen ---------- */
+const EIN_KAT=["Lammfleisch / Tierverkauf","Wolle","Zuschüsse / Förderung","Privateinlage","Sonstige Einnahmen"];
+const AUS_KAT=["Nachzucht","Futter & Mineral","Einstreu & Stroh","Tierarzt & Medikamente","Versicherungen","Beiträge & Gebühren","Fahrzeuge & Maschinen","Stall- & Weidebedarf","Dünger & Kalk","Pacht","Gebäude & Hütten","Sonstige Ausgaben"];
+const eur=n=>(Number(n)||0).toLocaleString("de-DE",{style:"currency",currency:"EUR"});
+function parseBetrag(v){v=String(v??"").replace(/[€\s ]/g,"");if(!v)return null;if(v.includes(","))v=v.replace(/\./g,"").replace(",",".");const n=parseFloat(v);return isNaN(n)?null:Math.round(Math.abs(n)*100)/100}
+function parseDatum(v){v=String(v??"").trim();let m=v.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2}|\d{4})$/);if(m){let y=m[3].length===2?"20"+m[3]:m[3];return `${y}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`}m=v.match(/^(\d{4})-(\d{2})-(\d{2})/);return m?`${m[1]}-${m[2]}-${m[3]}`:null}
+function guessKat(text,partner,ein){const t=(text+" "+(partner||"")).toLowerCase();
+  if(ein){if(/zuschuss|förder|prämie|beihilfe/.test(t))return EIN_KAT[2];if(/lamm|fleisch|schaf|tier|bock|aue/.test(t))return EIN_KAT[0];if(/wolle/.test(t))return EIN_KAT[1];if(/privat/.test(t))return EIN_KAT[3];return EIN_KAT[4]}
+  const r=[[/versicherung|rechtsschutz|haftpflicht|allianz/,3],[/pacht/,8],[/kaminkehrer|hütte|dach|gebäude/,9],[/stroh|einstreu|späne/,1],[/soja|salz|mineral|milchpulver|gerste|futter|hafer|heu|mais|leckstein|kraftfutter/,0],[/tierarzt|cydectin|impf|mittel|wurm|dr\.|medikament|klauen/,2],[/dünger|\bkas\b|kalk/,7],[/berufsgenossen|\bbg\b|beitrag|tierseuchenkasse|\btsk\b|gebühr|verband/,4],[/tüv|traktor|anhänger|diesel|reparatur|reifen|öl\b/,5],[/weidetor|zaun|schlauch|eimer|stall|tränke|netz|werkzeug|sackkarren/,6]];
+  if(/nachzucht|mutterschaf|zuchtschaf|jungschaf|zuchtbock|bock gekauft|kauf schaf/.test(t))return "Nachzucht";for(const[re,i]of r)if(re.test(t))return AUS_KAT[i+1];return "Sonstige Ausgaben"}
+const lammById=id=>alleLaemmer().find(y=>y.id===id);
+function finJahre(){const cur=new Date().getFullYear()+"";return[...new Set([cur,...S.fin.map(f=>(f.datum||"").slice(0,4)).filter(y=>/^\d{4}$/.test(y))])].sort().reverse()}
+function finJahr(){const j=finJahre();return j.includes(S.fyear)?S.fyear:j[0]}
+function nextNr(jahr){return S.fin.filter(f=>(f.datum||"").startsWith(jahr)).reduce((m,f)=>Math.max(m,Number(f.nr)||0),0)+1}
+function finHTML(){
+  const jahre=finJahre(),jahr=finJahr();S.ff=S.ff||"alle";
+  const yl=S.fin.filter(f=>(f.datum||"").startsWith(jahr));
+  const sum=a=>yl.filter(f=>f.art===a).reduce((n,f)=>n+(Number(f.betrag)||0),0);
+  const ein=sum("ein"),aus=sum("aus"),erg=ein-aus;
+  const kat=a=>{const g={};for(const f of yl.filter(x=>x.art===a))g[f.kategorie||"Ohne Kategorie"]=(g[f.kategorie||"Ohne Kategorie"]||0)+(Number(f.betrag)||0);return Object.entries(g).sort((x,y)=>y[1]-x[1])};
+  const katList=(a,col)=>{const k=kat(a),mx=Math.max(1,...k.map(x=>x[1]));return k.length?k.map(([n,v])=>`<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:14px"><span>${esc(n)}</span><b>${eur(v)}</b></div><div style="height:6px;background:var(--chip);border-radius:3px"><div style="height:6px;width:${(v/mx*100).toFixed(1)}%;background:${col};border-radius:3px"></div></div></div>`).join(""):`<div style="color:var(--mute);font-size:14px">Keine Einträge.</div>`};
+  const q=(S.fq||"").trim().toLowerCase();
+  let list=yl.filter(f=>S.ff==="alle"||f.art===S.ff);
+  if(q)list=list.filter(f=>[f.text,f.partner,f.kategorie,f.notiz].join(" ").toLowerCase().includes(q));
+  list.sort((a,b)=>(b.datum||"").localeCompare(a.datum||"")||(Number(b.nr)||0)-(Number(a.nr)||0));
+  return `<header><h1>💶 Finanzen <small></small><button class="btn sec sm" id="dm">💾</button></h1>
+    <input id="fq" type="search" placeholder="Suche: Text, Begünstigter, Kategorie …" value="${esc(S.fq||"")}">
+    <div class="chips">${[["alle","Alle"],["ein","Einnahmen"],["aus","Ausgaben"]].map(([k,t])=>`<button class="chip ${S.ff===k?"on":""}" data-ff="${k}">${t}</button>`).join("")}</div></header><main>
+  <div class="yearbar"><span>📅 Jahresübersicht</span><select id="fyr">${jahre.map(y=>`<option ${y===jahr?"selected":""}>${y}</option>`).join("")}</select></div>
+  <div class="card" style="padding:4px 16px">
+    <div class="finrow"><span>Einnahmen</span><b style="color:var(--acc)">${eur(ein)}</b></div>
+    <div class="finrow"><span>Ausgaben</span><b style="color:var(--danger)">${eur(aus)}</b></div>
+    <div class="finrow" style="border-bottom:0;font-size:18px"><span><b>Ergebnis</b></span><b style="color:${erg>=0?"var(--acc)":"var(--danger)"}">${eur(erg)}</b></div></div>
+  <details class="card"><summary><b>Ausgaben nach Kategorie</b></summary>${katList("aus","var(--danger)")}</details>
+  <details class="card"><summary><b>Einnahmen nach Kategorie</b></summary>${katList("ein","var(--acc)")}</details>
+  <details class="card"><summary><b>Lämmer & Erlöse je Mutterschaf</b></summary>${(()=>{const m=erloesMap(jahr);
+    const rows=S.schafe.map(sf=>{let geb=0,vk=0,sum=0;for(const l of S.lamm.filter(x=>x.schafId===sf.id)){const inY=(l.datum||"").startsWith(jahr);(l.laemmer||[]).forEach((y,i)=>{if(inY)geb++;const e=m[y.id||l.id+"_"+i];if(e){vk++;sum+=e.sum}})}return{sf,geb,vk,sum}}).filter(r=>r.geb||r.vk).sort((a,b)=>b.sum-a.sum||b.geb-a.geb);
+    return rows.length?`<table class="ftab"><tr><th>Mutterschaf</th><th>Lämmer ${jahr}</th><th>verk.</th><th>Erlös</th></tr>${rows.map(r=>`<tr data-id="${esc(r.sf.id)}"><td>${esc(r.sf.nr)}</td><td>${r.geb}</td><td>${r.vk}</td><td><b>${r.sum?eur(r.sum):"–"}</b></td></tr>`).join("")}</table><div style="color:var(--mute);font-size:12px;margin-top:6px">Erlös = Einnahmen ${jahr}, bei denen Lämmer per Ohrmarke zugeordnet wurden (bei mehreren Lämmern anteilig).</div>`:`<div style="color:var(--mute);font-size:14px;margin-top:6px">Noch keine Daten. Ordne bei einer Einnahme (z. B. Lammfleisch) die Lämmer per Ohrmarke zu.</div>`})()}</details>
+  <div class="row" style="margin:6px 0 4px">${S.db?`<label class="btn sec sm" style="text-align:center;color:var(--ink);margin:0">📥 Excel-Liste importieren<input type="file" accept=".csv,text/csv,text/plain" id="fim" style="display:none"></label>`:""}<button class="btn sec sm" id="fex">📊 Export ${jahr}</button></div>
+  <h2>Buchungen ${jahr} <span style="font-size:14px;color:var(--mute);font-family:inherit">${list.length}</span></h2>
+  ${list.length?list.map(f=>`<div class="card finitem" data-fin="${esc(f.id)}">
+    <div class="finnr">${esc(f.nr??"")}</div>
+    <div class="info"><div class="name">${esc(f.text)}</div><div class="sub">${fmtD(f.datum)}${f.partner?" · "+esc(f.partner):""}</div><div class="med">${esc(f.kategorie||"")}${f.schafId?` · 🐑 verknüpft`:""}${(f.lammIds||[]).length?` · 🐣 ${f.lammIds.map(id=>{const y=lammById(id);return y?esc(y.nr||"o. Ohrmarke"):"?"}).join(", ")}`:""}</div></div>
+    <div class="finbetrag" style="color:${f.art==="ein"?"var(--acc)":"var(--danger)"}">${f.art==="ein"?"+":"−"} ${eur(f.betrag)}</div></div>`).join(""):`<div class="empty">${yl.length?"Keine Treffer.":`Noch keine Buchungen für ${jahr}.<br>Tippe auf „+ Buchung“ oder importiere deine Excel-Liste.`}</div>`}
+  </main>${S.db?`<button class="fab" id="addf">+ Buchung</button>`:""}`}
+function bindFin(){
+  const a=$("addf");if(a)a.onclick=()=>finForm();
+  document.querySelectorAll("[data-fin]").forEach(x=>x.onclick=()=>finForm(S.fin.find(y=>y.id===x.dataset.fin)));
+  document.querySelectorAll(".ftab [data-id]").forEach(r=>r.onclick=()=>{S.sel=r.dataset.id;S.view="detail";render();scrollTo(0,0)});
+  document.querySelectorAll("[data-ff]").forEach(b=>b.onclick=()=>{S.ff=b.dataset.ff;render()});
+  const y=$("fyr");if(y)y.onchange=()=>{S.fyear=y.value;render()};
+  const fq=$("fq");if(fq)fq.oninput=()=>{S.fq=fq.value;const p=fq.selectionStart;render();const n=$("fq");n.focus();n.setSelectionRange(p,p)};
+  const fim=$("fim");if(fim)fim.onchange=e=>{if(e.target.files[0])importFinCSV(e.target.files[0]);e.target.value=""};
+  $("fex").onclick=exportFinCSV;
+}
+function finForm(f){
+  const neu=!f;f=f||{art:"aus",datum:today()};let art=f.art;
+  const partners=[...new Set(S.fin.map(x=>x.partner).filter(Boolean))].sort();
+  const texte=[...new Set(S.fin.map(x=>x.text).filter(Boolean))].slice(-200);
+  const katOpts=()=>(art==="ein"?EIN_KAT:AUS_KAT).map(k=>`<option ${f.kategorie===k?"selected":""}>${k}</option>`).join("");
+  openSheet(`<h3>${neu?"Neue Buchung":"Buchung bearbeiten"}${f.nr?` <span style="color:var(--mute);font-size:15px">Nr. ${esc(f.nr)}</span>`:""}</h3>${f.schafId?`<div class="note" style="margin-top:8px">🐑 Verknüpft mit Mutterschaf ${esc((S.schafe.find(x=>x.id===f.schafId)||{}).nr||"(gelöscht)")} – ein geänderter Betrag wird dort als Kaufpreis übernommen.</div>`:""}<form id="f">
+    <div class="seg" style="margin-top:10px"><button type="button" class="chip" id="aE">＋ Einnahme</button><button type="button" class="chip" id="aA">− Ausgabe</button></div>
+    <div class="row"><div><label>Datum *</label><input type="date" name="datum" required value="${esc(f.datum)}"></div>
+    <div><label>Betrag (€) *</label><input name="betrag" required inputmode="decimal" placeholder="0,00" value="${f.betrag!=null?String(f.betrag).replace(".",","):""}"></div></div>
+    <label>Beschreibung *</label><input name="text" required list="ftl" value="${esc(f.text)}" placeholder="z. B. 2x Sojaschrot 25 kg"><datalist id="ftl">${texte.map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
+    <label>Kategorie</label><select name="kategorie" id="fkat">${katOpts()}</select>
+    <label id="plab">${art==="ein"?"Käufer / Zahler":"Begünstigter"}</label><input name="partner" list="fpl" value="${esc(f.partner)}"><datalist id="fpl">${partners.map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
+    <div id="lmpick"></div>
+    <label>Notiz</label><textarea name="notiz">${esc(f.notiz)}</textarea>
+    <div class="acts">${neu?"":`<button type="button" class="btn del" id="del">Löschen</button>`}<button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div></form>`);
+  const lsel=new Set(f.lammIds||[]);let lq="",setVk=true;
+  const anderswo=new Set(S.fin.filter(x=>x.id!==f.id).flatMap(x=>x.lammIds||[]));
+  const drawPick=()=>{const box=$("lmpick");if(art!=="ein"){box.innerHTML="";return}
+    const cand=alleLaemmer().filter(y=>lsel.has(y.id)||(!anderswo.has(y.id)&&(y.status==="lebend"||y.status==="verkauft")));
+    const list=cand.filter(y=>!lq||[y.nr,y.mutter&&y.mutter.nr].join(" ").toLowerCase().includes(lq)).sort((a,b)=>(lsel.has(b.id)-lsel.has(a.id))||(b.datum||"").localeCompare(a.datum||""));
+    box.innerHTML=`<label>🐣 Verkaufte Lämmer zuordnen (Ohrmarke) – optional</label>
+      <div class="row" style="align-items:center"><input id="lpq" type="search" placeholder="Ohrmarke suchen …" value="${esc(lq)}"><div style="flex:none;color:var(--mute);font-size:14px">${lsel.size} gewählt</div></div>
+      <div class="chklist">${list.map(y=>`<label class="ck"><input type="checkbox" data-lp="${esc(y.id)}" ${lsel.has(y.id)?"checked":""}><span>${lammLabel(y)}${y.status!=="lebend"?` <span style="color:var(--mute);font-size:12px">(${esc(y.status)})</span>`:""}</span></label>`).join("")||`<div style="color:var(--mute);padding:12px 4px;font-size:14px">Keine passenden Lämmer.</div>`}</div>
+      ${lsel.size?`<label class="ck" style="border:0"><input type="checkbox" id="lvk" ${setVk?"checked":""}><span>Status dieser Lämmer auf „verkauft“ setzen</span></label>`:""}`;
+    const q=$("lpq");q.oninput=()=>{lq=q.value.toLowerCase();const p=q.selectionStart;drawPick();const n=$("lpq");n.focus();n.setSelectionRange(p,p)};
+    document.querySelectorAll("[data-lp]").forEach(c=>c.onchange=()=>{c.checked?lsel.add(c.dataset.lp):lsel.delete(c.dataset.lp);drawPick()});
+    const v=$("lvk");if(v)v.onchange=()=>{setVk=v.checked}};
+  const setArt=v=>{drawPick&&setTimeout(drawPick);art=v;$("aE").classList.toggle("on",v==="ein");$("aA").classList.toggle("on",v==="aus");$("fkat").innerHTML=katOpts();$("plab").textContent=v==="ein"?"Käufer / Zahler":"Begünstigter";if(neu)autoKat()};
+  let katTouched=!neu;$("fkat").onchange=()=>{katTouched=true};
+  const autoKat=()=>{if(katTouched)return;const t=document.querySelector("[name=text]").value,p=document.querySelector("[name=partner]").value;if(t)$("fkat").value=guessKat(t,p,art==="ein")};
+  document.querySelector("[name=text]").addEventListener("input",autoKat);document.querySelector("[name=partner]").addEventListener("input",autoKat);
+  $("aE").onclick=()=>setArt("ein");$("aA").onclick=()=>setArt("aus");setArt(art);
+  $("cx").onclick=closeSheet;
+  if(!neu)armDelete($("del"),async()=>{try{await S.db.doc("finanzen/"+f.id).delete();
+    if(f.schafId){const sf=S.schafe.find(x=>x.id===f.schafId);if(sf&&sf.finId===f.id){const{id:_,finId,...rest}=sf;await S.db.doc("schafe/"+sf.id).set({...rest,kaufpreis:null})}}
+    closeSheet();toast("Gelöscht")}catch(x){fail(x)}});
+  $("f").onsubmit=async ev=>{ev.preventDefault();const d=Object.fromEntries(new FormData(ev.target));for(const k in d)d[k]=String(d[k]).trim();
+    const b=parseBetrag(d.betrag);if(b===null){toast("Bitte gültigen Betrag eingeben");return}
+    const body={...d,art,lammIds:art==="ein"?[...lsel]:[],betrag:b,nr:f.nr&&(f.datum||"").slice(0,4)===d.datum.slice(0,4)?f.nr:nextNr(d.datum.slice(0,4)),geaendert:new Date().toISOString()};
+    if(f.schafId)body.schafId=f.schafId;
+    try{if(neu)await S.db.collection("finanzen").add(body);else await S.db.doc("finanzen/"+f.id).set(body);
+      if(f.schafId){const sf=S.schafe.find(x=>x.id===f.schafId);if(sf&&Number(sf.kaufpreis)!==b){const{id:_,...rest}=sf;await S.db.doc("schafe/"+sf.id).set({...rest,kaufpreis:b,geaendert:new Date().toISOString()})}}
+      if(setVk&&body.lammIds.length){for(const l of S.lamm){let ch=false;const ls=(l.laemmer||[]).map((y,i)=>{const id=y.id||l.id+"_"+i;if(body.lammIds.includes(id)&&(y.status||"lebend")==="lebend"){ch=true;return{...y,id,status:"verkauft"}}return{...y,id}});
+        if(ch){const{id,...rest}=l;await S.db.doc("lammungen/"+l.id).set({...rest,laemmer:ls,geaendert:new Date().toISOString()})}}}
+      S.fyear=d.datum.slice(0,4);closeSheet();toast("Gespeichert")}catch(x){fail(x)}};
+}
+function parseCSV(text){text=text.replace(/^﻿/,"");const first=text.split(/\r?\n/).find(l=>/datum/i.test(l))||text.split(/\r?\n/)[0];
+  const del=[";","\t",","].sort((a,b)=>first.split(b).length-first.split(a).length)[0];
+  const rows=[];let row=[],cell="",q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){cell+='"';i++}else q=false}else cell+=c}
+    else if(c==='"')q=true;else if(c===del){row.push(cell);cell=""}else if(c==="\n"||c==="\r"){if(c==="\r"&&text[i+1]==="\n")i++;row.push(cell);rows.push(row);row=[];cell=""}else cell+=c}
+  if(cell||row.length){row.push(cell);rows.push(row)}return rows}
+async function importFinCSV(file){
+  const text=await file.text();const rows=parseCSV(text);
+  const hi=rows.findIndex(r=>r.some(c=>/^\s*datum\s*$/i.test(c))&&r.some(c=>/einnahm|ausgab/i.test(c)));
+  if(hi<0){toast("Spalten „Datum“ und „Einnahme/Ausgabe“ nicht gefunden");return}
+  const h=rows[hi].map(c=>c.trim().toLowerCase()),col=re=>h.findIndex(c=>re.test(c));
+  const cN=col(/lfd|^nr/),cD=col(/^datum/),cT=col(/kategorie|beschreibung|text|verwendung|bezeichnung/),cE=col(/einnahm/),cA=col(/ausgab/),cP=col(/begünstig|partner|empfänger|käufer|lieferant/);
+  const key=f=>[f.datum,(f.text||"").toLowerCase().trim(),f.art,Number(f.betrag).toFixed(2)].join("|");
+  const seen=new Set(S.fin.map(key));let n=0,skip=0;const neu=[];
+  for(const r of rows.slice(hi+1)){const datum=parseDatum(r[cD]);if(!datum)continue;
+    const e=cE>=0?parseBetrag(r[cE]):null,a=cA>=0?parseBetrag(r[cA]):null;if(e===null&&a===null)continue;
+    const art=e!==null?"ein":"aus",betrag=e!==null?e:a,txt=(cT>=0?r[cT]:"").trim(),partner=(cP>=0?r[cP]:"").trim();
+    const f={art,betrag,datum,text:txt||"(ohne Text)",partner,kategorie:guessKat(txt,partner,art==="ein"),nr:cN>=0&&/^\d+$/.test((r[cN]||"").trim())?Number(r[cN]):null,notiz:"",geaendert:new Date().toISOString()};
+    if(seen.has(key(f))){skip++;continue}seen.add(key(f));neu.push(f)}
+  const mx={};for(const f of [...S.fin,...neu])if(f.nr!=null){const y=f.datum.slice(0,4);mx[y]=Math.max(mx[y]||0,Number(f.nr)||0)}
+  for(const f of neu){if(f.nr==null){const y=f.datum.slice(0,4);f.nr=mx[y]=(mx[y]||0)+1}store.finanzen[newId()]=f;n++}
+  saveStore();refresh();if(neu[0])S.fyear=neu[0].datum.slice(0,4);render();
+  toast(`${n} Buchungen importiert${skip?`, ${skip} schon vorhanden`:""}`)}
+function exportFinCSV(){const jahr=finJahr();
+  const yl=S.fin.filter(f=>(f.datum||"").startsWith(jahr)).sort((a,b)=>(Number(a.nr)||0)-(Number(b.nr)||0)||(a.datum||"").localeCompare(b.datum||""));
+  const num=v=>v==null||v===""?"":Number(v).toFixed(2).replace(".",",");
+  const ein=yl.filter(f=>f.art==="ein").reduce((n,f)=>n+f.betrag,0),aus=yl.filter(f=>f.art==="aus").reduce((n,f)=>n+f.betrag,0);
+  const rows=[["Jahresübersicht "+jahr],["Einnahmen",num(ein)],["Ausgaben",num(aus)],["Ergebnis",num(ein-aus)],[],["Lfd.Nr.","Datum","Beschreibung","Kategorie","Einnahme","Ausgabe","Begünstigter","Lämmer (Ohrmarken)","Notiz"]];
+  for(const f of yl)rows.push([f.nr,fmtD(f.datum),f.text,f.kategorie,f.art==="ein"?num(f.betrag):"",f.art==="aus"?num(f.betrag):"",f.partner,(f.lammIds||[]).map(id=>{const y=lammById(id);return y?(y.nr||"ohne Ohrmarke"):""}).join(", "),f.notiz]);
+  download(`finanzen_${jahr}_${stamp()}.csv`,"﻿"+rows.map(r=>r.map(csvCell).join(";")).join("\r\n"),"text/csv")}
+
+/* ---------- sheets ---------- */
+
+function openSheet(html){$("sheet").innerHTML=html;$("ov").classList.add("open");document.body.style.overflow="hidden"}
+function closeSheet(){$("ov").classList.remove("open");document.body.style.overflow=""}
+$("ov").addEventListener("click",e=>{if(e.target.id==="ov")closeSheet()});
+function armDelete(btn,fn){btn.onclick=()=>{if(btn.classList.contains("armed"))return fn();btn.classList.add("armed");btn.textContent="Wirklich löschen?";setTimeout(()=>{btn.classList.remove("armed");btn.textContent="Löschen"},4000)}}
+
+function eweForm(s){
+  s=s||{status:"aktiv",rasse:RASSEN[0]};
+  openSheet(`<h3>${s.id?"Mutterschaf bearbeiten":"Neues Mutterschaf"}</h3>
+  <form id="f">
+    <label>Ohrmarkennr. *</label><input name="nr" required value="${esc(s.nr)}" placeholder="z. B. DE 09 187 …">
+    <label>Rasse *</label><select name="rasse" required>${RASSEN.map(r=>`<option ${s.rasse===r?"selected":""}>${r}</option>`).join("")}</select>
+    <div class="row"><div><label>Geburtsdatum</label><input type="date" name="geb" value="${esc(s.geb)}"></div>
+    <div><label>Zugang am *</label><input type="date" name="zugang" required value="${esc(s.zugang)}"></div></div>
+    <label>Herkunft * (Betrieb / Ort / eigene Nachzucht)</label><input name="herkunft" required value="${esc(s.herkunft)}">
+    <label>Züchter *</label><input name="zuechter" required value="${esc(s.zuechter)}">
+    <label>Kaufpreis (€)</label><input name="kaufpreis" inputmode="decimal" placeholder="leer lassen bei eigener Nachzucht" value="${s.kaufpreis!=null&&s.kaufpreis!==""?String(s.kaufpreis).replace(".",","):""}">
+    <div style="color:var(--mute);font-size:12px;margin-top:4px">💶 Wird automatisch als Ausgabe „Nachzucht“ bei den Finanzen gebucht${s.finId&&S.fin.some(x=>x.id===s.finId)?" (bereits verknüpft – Änderungen werden übernommen)":""}.</div>
+    <label>Vater (Bock)</label><input name="vater" value="${esc(s.vater)}">
+    <label>Auffälligkeiten (Klauen, Euter, Lahmheit, Charakter …)</label><textarea name="auff">${esc(s.auff)}</textarea>
+    <label>Notizen</label><textarea name="notiz">${esc(s.notiz)}</textarea>
+    <label>Status</label><select name="status"><option value="aktiv">aktiv</option><option value="abgegangen" ${s.status==="abgegangen"?"selected":""}>abgegangen</option></select>
+    <div class="row"><div><label>Abgang am</label><input type="date" name="abgang" value="${esc(s.abgang)}"></div>
+    <div><label>Abgangsgrund</label><input name="abgangGrund" value="${esc(s.abgangGrund)}" placeholder="verkauft, verendet …"></div></div>
+    <div class="acts">${s.id?`<button type="button" class="btn del" id="del">Löschen</button>`:""}<button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div>
+  </form>`);
+  $("cx").onclick=closeSheet;
+  if(s.id)armDelete($("del"),async()=>{
+    try{for(const l of lammFor(s.id))await S.db.doc("lammungen/"+l.id).delete();await S.db.doc("schafe/"+s.id).delete();closeSheet();S.view="list";render();toast("Gelöscht")}catch(e){fail(e)}});
+  $("f").onsubmit=async e=>{
+    e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
+    for(const k in d)d[k]=String(d[k]).trim();
+    const kp=d.kaufpreis?parseBetrag(d.kaufpreis):null;
+    if(d.kaufpreis&&kp===null){toast("Bitte gültigen Kaufpreis eingeben");return}
+    d.kaufpreis=kp;d.geaendert=new Date().toISOString();
+    try{
+      const keep={};for(const k of ["angelegt","finId","name","mutter"])if(s[k]!=null)keep[k]=s[k];
+      let id=s.id;
+      if(id)await S.db.doc("schafe/"+id).set({...keep,...d,angelegt:s.angelegt||d.geaendert});
+      else{d.angelegt=d.geaendert;const r=await S.db.collection("schafe").add(d);id=r.id;S.sel=id;S.view="detail"}
+      // Verknüpfung Finanzen (Nachzucht)
+      const alt=s.finId&&S.fin.find(x=>x.id===s.finId);let msg="Gespeichert";
+      if(kp){const datum=d.zugang||today();const body={art:"aus",betrag:kp,datum,text:`Kauf Mutterschaf ${d.nr}`,kategorie:"Nachzucht",partner:d.zuechter,schafId:id,lammIds:[],notiz:alt?alt.notiz||"":"",
+          nr:alt&&(alt.datum||"").slice(0,4)===datum.slice(0,4)?alt.nr:nextNr(datum.slice(0,4)),geaendert:new Date().toISOString()};
+        let fid=alt?alt.id:null;
+        if(alt)await S.db.doc("finanzen/"+fid).set(body);else{const r=await S.db.collection("finanzen").add(body);fid=r.id}
+        if(fid!==s.finId){const cur=S.schafe.find(x=>x.id===id)||{...d};const{id:_,...rest}=cur;await S.db.doc("schafe/"+id).set({...rest,finId:fid})}
+        msg=alt?"Gespeichert · Ausgabe aktualisiert":"Gespeichert · Ausgabe bei Finanzen angelegt"}
+      else if(alt){await S.db.doc("finanzen/"+alt.id).delete();const cur=S.schafe.find(x=>x.id===id);if(cur){const{id:_,finId,...rest}=cur;await S.db.doc("schafe/"+id).set(rest)}msg="Gespeichert · Ausgabe entfernt"}
+      closeSheet();render();toast(msg)
+    }catch(err){fail(err)}
+  };
+}
+
+function lammForm(s,l){
+  l=l||{datum:new Date().toISOString().slice(0,10),laemmer:[{sex:"",status:"lebend"}],verlauf:"leicht"};
+  let lambs=(l.laemmer||[]).map(x=>({...x}));
+  const draw=()=>{
+    $("lb").innerHTML=lambs.map((y,i)=>`<div class="lambbox">
+      <div class="hd"><span>Lamm ${i+1}</span>${lambs.length>1?`<button type="button" class="btn sec sm" data-rm="${i}">Entfernen</button>`:""}</div>
+      <label>Geschlecht</label><div class="seg">
+        <button type="button" class="chip ${y.sex==="w"?"on":""}" data-sx="${i}:w">♀ weiblich</button>
+        <button type="button" class="chip ${y.sex==="m"?"on":""}" data-sx="${i}:m">♂ männlich</button></div>
+      <div class="row"><div><label>Ohrmarke</label><input data-k="${i}:nr" value="${esc(y.nr)}"></div>
+      <div><label>Geb.-Gewicht (kg)</label><input data-k="${i}:gewicht" inputmode="decimal" value="${esc(y.gewicht)}"></div></div>
+      <label>Status</label><select data-k="${i}:status">${["lebend","tot geboren","verendet","verkauft"].map(o=>`<option ${y.status===o?"selected":""}>${o}</option>`).join("")}</select>
+      <label>Bemerkung</label><input data-k="${i}:bem" value="${esc(y.bem)}">
+    </div>`).join("");
+    document.querySelectorAll("[data-sx]").forEach(b=>b.onclick=()=>{const[i,v]=b.dataset.sx.split(":");lambs[i].sex=v;draw()});
+    document.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{lambs.splice(+b.dataset.rm,1);draw()});
+    document.querySelectorAll("[data-k]").forEach(inp=>inp.oninput=inp.onchange=()=>{const[i,k]=inp.dataset.k.split(":");lambs[i][k]=inp.value});
+  };
+  openSheet(`<h3>${l.id?"Ablammung bearbeiten":"Neue Ablammung"}</h3>
+  <div style="color:var(--mute)">${esc(s.nr)} ${esc(s.name||"")}</div>
+  <form id="f">
+    <div class="row"><div><label>Datum *</label><input type="date" name="datum" required value="${esc(l.datum)}"></div>
+    <div><label>Deckbock</label><input name="bock" value="${esc(l.bock)}"></div></div>
+    <label>Geburtsverlauf</label><select name="verlauf">${["leicht","mit Hilfe","schwer","Tierarzt"].map(o=>`<option ${l.verlauf===o?"selected":""}>${o}</option>`).join("")}</select>
+    <div id="lb"></div>
+    <button type="button" class="btn sec" id="addl" style="width:100%;margin-top:10px">+ weiteres Lamm</button>
+    <label>Notiz zur Ablammung</label><textarea name="notiz">${esc(l.notiz)}</textarea>
+    <div class="acts">${l.id?`<button type="button" class="btn del" id="del">Löschen</button>`:""}<button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div>
+  </form>`);
+  draw();
+  $("addl").onclick=()=>{lambs.push({sex:"",status:"lebend"});draw()};
+  $("cx").onclick=closeSheet;
+  if(l.id)armDelete($("del"),async()=>{try{await S.db.doc("lammungen/"+l.id).delete();closeSheet();toast("Gelöscht")}catch(e){fail(e)}});
+  $("f").onsubmit=async e=>{
+    e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
+    const body={schafId:s.id,datum:d.datum,bock:String(d.bock).trim(),verlauf:d.verlauf,notiz:String(d.notiz).trim(),
+      laemmer:lambs.map(y=>({id:y.id||newId(),sex:y.sex||"",nr:(y.nr||"").trim(),gewicht:(y.gewicht||"").trim().replace(".",","),status:y.status||"lebend",bem:(y.bem||"").trim()})),
+      geaendert:new Date().toISOString()};
+    try{
+      if(l.id)await S.db.doc("lammungen/"+l.id).set(body);else await S.db.collection("lammungen").add(body);
+      closeSheet();toast("Gespeichert")
+    }catch(err){fail(err)}
+  };
+}
+function fail(e){
+  if(e&&e.code==="invalid_argument"&&!S.readonly){S.readonly=true;closeSheet();render();toast("Keine Schreibrechte");return}
+  if(e&&e.code==="quota_exceeded"){toast("Speicher voll – bitte alte Einträge löschen");return}
+  toast("Fehler beim Speichern – bitte nochmal versuchen")
+}
+
+/* ---------- data (offline, localStorage) ---------- */
+const KEY="herdenbuch-v1";
+const BETRIEB_START={};
+let store;
+function loadStore(){try{const o=JSON.parse(localStorage.getItem(KEY));if(o&&o.schafe&&o.lammungen){o.behandlungen=o.behandlungen||{};o.finanzen=o.finanzen||{};o.stallbuch=o.stallbuch||{};o.meta=o.meta||{};o.betrieb=o.betrieb||{...BETRIEB_START};return o}}catch(e){}return{schafe:{},lammungen:{},finanzen:{},behandlungen:{},stallbuch:{},meta:{},betrieb:{...BETRIEB_START}}}
+function saveStore(){store.meta=store.meta||{};store.meta.geaendert=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(store))}
+function ensureLambIds(o){for(const[lid,l]of Object.entries(o.lammungen||{}))(l.laemmer||[]).forEach((y,i)=>{if(!y.id)y.id=lid+"_"+i})}
+function refresh(){ensureLambIds(store);S.schafe=Object.entries(store.schafe).map(([id,d])=>({...d,id}));S.lamm=Object.entries(store.lammungen).map(([id,d])=>({...d,id}));S.beh=Object.entries(store.behandlungen).map(([id,d])=>({...d,id}));S.tb=Object.entries(store.stallbuch).map(([id,d])=>({...d,id}));S.fin=Object.entries(store.finanzen).map(([id,d])=>({...d,id}));render()}
+const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const localDb={
+  doc(path){const[c,id]=path.split("/");return{
+    async set(d){store[c][id]=d;saveStore();refresh()},
+    async delete(){delete store[c][id];(store.deleted=store.deleted||{})[c+"/"+id]=new Date().toISOString();saveStore();refresh()}}},
+  collection(c){return{async add(d){const id=newId();store[c][id]=d;saveStore();refresh();return{id}}}}
+};
+async function download(name,text,type){
+  try{const f=new File([text],name,{type});if(navigator.canShare&&navigator.canShare({files:[f]})&&/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)){await navigator.share({files:[f],title:name});return}}catch(e){if(e&&e.name==="AbortError")return}
+  return download0(name,text,type)}
+function download0(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+const stamp=()=>new Date().toISOString().slice(0,16).replace("T","_").replace(":","-");
+function exportJSON(){download(`herdenbuch_${stamp()}.json`,JSON.stringify(store,null,1),"application/json");store.meta.sicherung=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(store));toast("Sicherung gespeichert");render()}
+function csvCell(v){v=String(v??"");return /[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+function exportCSV(){
+  const rows=[["Ohrmarke Mutter","Name","Rasse","Geburtsdatum","Herkunft","Züchter","Status","Ablammung Datum","Deckbock","Verlauf","Lamm Geschlecht","Lamm Ohrmarke","Gewicht kg","Lamm Status","Bemerkung"]];
+  for(const s of S.schafe){const ls=lammFor(s.id);const base=[s.nr,s.name,s.rasse,fmtD(s.geb),s.herkunft,s.zuechter,s.status];
+    if(!ls.length)rows.push(base);
+    for(const l of ls)for(const y of (l.laemmer||[{}]))rows.push([...base,fmtD(l.datum),l.bock,l.verlauf,y.sex==="m"?"männlich":y.sex==="w"?"weiblich":"",y.nr,y.gewicht,y.status,y.bem])}
+  download(`herdenbuch_laemmer_${stamp()}.csv`,"﻿"+rows.map(r=>r.map(csvCell).join(";")).join("\r\n"),"text/csv")}
+function exportBestandCSV(){
+  const akt=S.schafe.filter(x=>x.status!=="abgegangen").sort((a,b)=>String(a.nr||"").localeCompare(String(b.nr||""),"de",{numeric:true}));
+  const rows=[["Ohrmarkennr.","Rasse","Geburtsdatum","Alter","Herkunft","Züchter","Zugang am","Kaufpreis","Vater","Auffälligkeiten","Notizen","Ablammungen","Lämmer gesamt","Lämmer verkauft (zugeordnet)","Erlöse Lämmer gesamt","Letzte Ablammung","Letzte Behandlung","Medikament"]];
+  for(const x of akt){const l=lammFor(x.id),b=behFor(x.id)[0];
+    const er=erloesSchaf(x.id);rows.push([x.nr,x.rasse,fmtD(x.geb),alter(x.geb),x.herkunft,x.zuechter,fmtD(x.zugang),Number(x.kaufpreis)>0?Number(x.kaufpreis).toFixed(2).replace(".",","):"",x.vater,x.auff,x.notiz,l.length,l.reduce((n,y)=>n+(y.laemmer||[]).length,0),er.n,er.sum?er.sum.toFixed(2).replace(".",","):"",l[0]?fmtD(l[0].datum):"",b?fmtD(b.datum):"",b?b.medikament:""].map(v=>v==="–"?"":v))}
+  download(`mutterschaf_bestand_${stamp()}.csv`,"\ufeff"+rows.map(r=>r.map(csvCell).join(";")).join("\r\n"),"text/csv");toast(`${akt.length} Mutterschafe exportiert`)}
+function exportBehCSV(){
+  const rows=[["Datum","Medikament","Grund","Dosis","Wartezeit bis","Behandelt von","Charge/Beleg","Alle Tiere","Ohrmarke","Name","Notiz"]];
+  for(const b of S.beh.slice().sort((a,c)=>(c.datum||"").localeCompare(a.datum||"")))for(const id of b.schafIds||[]){const s=S.schafe.find(x=>x.id===id)||{};
+    rows.push([fmtD(b.datum),b.medikament,b.grund,b.dosis,fmtD(b.wartezeit),b.von,b.charge,b.alle?"ja":"nein",s.nr||"(gelöscht)",s.name,b.notiz])}
+  download(`herdenbuch_behandlungen_${stamp()}.csv`,"\ufeff"+rows.map(r=>r.map(csvCell).join(";")).join("\r\n"),"text/csv")}
+function importJSON(file){
+  const fr=new FileReader();fr.onload=()=>{try{
+    const inc=JSON.parse(fr.result);if(!inc.schafe||!inc.lammungen)throw 0;
+    const del={...(store.deleted||{}),...(inc.deleted||{})};let n=0;
+    for(const c of ["schafe","lammungen","behandlungen","stallbuch","finanzen"])for(const[id,d]of Object.entries(inc[c]||{})){
+      const cur=store[c][id];if(del[c+"/"+id])continue;
+      if(!cur||(d.geaendert||"")>(cur.geaendert||"")){store[c][id]=d;n++}}
+    for(const k of Object.keys(del)){const[c,id]=k.split("/");if(store[c])delete store[c][id]}
+    if(inc.betrieb&&(inc.betrieb.geaendert||"")>((store.betrieb||{}).geaendert||"")){store.betrieb=inc.betrieb;n++}
+    store.deleted=del;saveStore();refresh();closeSheet();toast(`Eingelesen: ${n} neue/geänderte Einträge`)
+  }catch(e){toast("Datei konnte nicht gelesen werden")}};fr.readAsText(file)}
+function dataMenu(){
+  const last=store.meta&&store.meta.sicherung;
+  openSheet(`<h3>Daten sichern & abgleichen</h3>
+  <div class="note">Die Daten liegen nur auf diesem Gerät, in diesem Browser. Sichere regelmäßig – und zum Abgleich zwischen PC und Handy: auf einem Gerät „Sichern“, die Datei aufs andere Gerät bringen und dort „Einlesen“. Neuere Einträge gewinnen, nichts wird doppelt.</div>
+  <div style="color:var(--mute);font-size:14px;margin-bottom:12px">Letzte Sicherung: ${last?new Date(last).toLocaleString("de-DE"):"noch nie"}</div>
+  <button class="btn" style="width:100%" id="ex">💾 Sichern (Datei speichern)</button>
+  <label class="btn sec" style="display:block;text-align:center;margin-top:10px;color:var(--ink);font-size:16px">📥 Sicherung einlesen<input type="file" accept=".json,application/json" id="im" style="display:none"></label>
+  <button class="btn sec" style="width:100%;margin-top:10px" id="csvs">🐑 Aktueller Mutterschaf-Bestand (CSV)</button>
+  <button class="btn sec" style="width:100%;margin-top:10px" id="csv">📊 Schafe & Lämmer als Excel-Tabelle (CSV)</button>
+  <button class="btn sec" style="width:100%;margin-top:10px" id="csvb">💊 Behandlungen als Excel-Tabelle (CSV)</button>
+  <div class="acts"><button class="btn sec" id="cx">Schließen</button></div>`);
+  $("ex").onclick=exportJSON;$("csv").onclick=exportCSV;$("csvb").onclick=exportBehCSV;$("csvs").onclick=exportBestandCSV;$("cx").onclick=closeSheet;
+  $("im").onchange=e=>{if(e.target.files[0])importJSON(e.target.files[0])};
+}
+try{localStorage.setItem("__t","1");localStorage.removeItem("__t");S.db=localDb}catch(e){S.err="Dieser Browser erlaubt hier kein Speichern. Bitte die Datei in Chrome, Edge, Firefox oder Safari öffnen."}
+store=loadStore();S.loaded={s:true,l:true};
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+refresh();
+</script>
+<script>if("serviceWorker" in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});</script>
+</body>
+</html>
