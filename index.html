@@ -74,7 +74,7 @@ h2{font-size:17px;margin:18px 0 8px;display:flex;align-items:center;justify-cont
 .seg{display:flex;gap:6px}.seg .chip{flex:1;text-align:center}
 .note{background:var(--chip);border-radius:10px;padding:10px 12px;font-size:14px;color:var(--mute);margin-bottom:10px}
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:7;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
-.tabbar button{flex:1;border:0;background:none;font:inherit;font-size:12px;color:var(--mute);padding:8px 0 9px;cursor:pointer}
+.tabbar button{flex:1;border:0;background:none;font:inherit;font-size:11px;color:var(--mute);padding:8px 0 9px;cursor:pointer}
 .tabbar button b{display:block;font-size:20px;line-height:1.2}
 .tabbar button.on{color:var(--acc);font-weight:600}
 .fab{bottom:calc(76px + env(safe-area-inset-bottom))!important}
@@ -90,6 +90,14 @@ main{padding-bottom:170px!important}
 .yearbar span{font-size:14px;color:var(--mute);font-weight:600}
 .yearbar select{width:auto;padding:7px 34px 7px 12px;font-weight:700;color:var(--acc-d);border:2px solid var(--acc);border-radius:999px}
 .lmseg{margin-top:10px}.lmseg .chip{font-size:13px;padding:8px 6px;font-weight:600}
+.finrow{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
+.finitem{display:flex;gap:10px;align-items:center;cursor:pointer;padding:12px}
+.finnr{min-width:34px;height:34px;border-radius:9px;background:var(--chip);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--mute)}
+.finitem .info{flex:1;min-width:0}.finitem .name{font-weight:600;font-size:15px}
+.finbetrag{font-weight:700;white-space:nowrap;font-size:15px}
+details.card summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between}
+details.card summary::after{content:"▾";color:var(--mute)}details[open].card summary::after{content:"▴"}
+.ftab{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px}.ftab th{text-align:left;color:var(--mute);font-weight:600;font-size:12px;padding:6px 4px;border-bottom:1px solid var(--line)}.ftab td{padding:8px 4px;border-bottom:1px solid var(--line)}.ftab tr[data-id]{cursor:pointer}.ftab td:last-child,.ftab th:last-child{text-align:right}
 /* ===== Design: Grünland ===== */
 :root{
   --bg:#eef3e6;--card:#ffffff;--ink:#1f2d1a;--mute:#5f6f55;--line:#d5e0c8;
@@ -147,12 +155,13 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--acc);outline-off
 
 <script>
 const RASSEN=["Weißes Bergschaf","Coburger Fuchs","Kreuzung","Sonstige"];
-const S={tab:"list",beh:[],tb:[],db:null,schafe:[],lamm:[],loaded:{s:false,l:false},err:null,view:"list",sel:null,q:"",filter:"alle",readonly:false};
+const S={fin:[],tab:"list",beh:[],tb:[],db:null,schafe:[],lamm:[],loaded:{s:false,l:false},err:null,view:"list",sel:null,q:"",filter:"alle",readonly:false};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmtD=d=>{if(!d)return"–";const [y,m,t]=d.split("-");return t?`${t}.${m}.${y}`:d};
 function alter(geb){if(!geb)return"";const g=new Date(geb),n=new Date();let m=(n.getFullYear()-g.getFullYear())*12+(n.getMonth()-g.getMonth());if(n.getDate()<g.getDate())m--;if(m<0)return"";const j=Math.floor(m/12);return j>=1?`${j} J.${m%12?" "+(m%12)+" Mon.":""}`:`${m} Mon.`}
 function toast(t){const e=$("toast");e.textContent=t;e.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display="none",2200)}
+const kurzNr=n=>{n=String(n||"?").trim();const d=n.replace(/\s+/g,"");return d.length>6?d.slice(-5):n};
 const lammFor=id=>S.lamm.filter(l=>l.schafId===id).sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
 
 /* ---------- render ---------- */
@@ -162,6 +171,7 @@ function render(){
   if(S.view==="betrieb"){app.innerHTML=betriebHTML();bindBetrieb();return}
   if(S.tab==="beh"){app.innerHTML=behHTML()+tabbar();bindBeh();bindTabs();return}
   if(S.tab==="lm"){app.innerHTML=lmHTML()+tabbar();bindLm();bindTabs();return}
+  if(S.tab==="fin"){app.innerHTML=finHTML()+tabbar();bindFin();bindTabs();return}
   if(S.tab==="tb"){app.innerHTML=tbHTML()+tabbar();bindTb();bindTabs();return}
   const loading=!(S.loaded.s&&S.loaded.l);
   let list=S.schafe.slice();
@@ -206,9 +216,9 @@ function render(){
 function eweCard(s){
   const l=lammFor(s.id),n=l.reduce((k,x)=>k+(x.laemmer||[]).length,0);
   return `<div class="card ewe" data-id="${esc(s.id)}">
-    <div class="tag ${s.rasse==="Coburger Fuchs"?"fuchs":""}">${esc(s.nr||"?")}</div>
+    <div class="tag ${s.rasse==="Coburger Fuchs"?"fuchs":""}">${esc(kurzNr(s.nr))}</div>
     <div class="info">
-      <div class="name">${esc(s.name||"Ohne Name")} ${s.status==="abgegangen"?'<span class="badge">abgegangen</span>':""}</div>
+      <div class="name">${esc(s.nr||"?")} ${s.status==="abgegangen"?'<span class="badge">abgegangen</span>':""}</div>
       <div class="sub">${esc(s.rasse||"")}${s.geb?" · "+alter(s.geb):""} · ${l.length} Ablamm. / ${n} Lämmer</div>
       ${s.auff?`<div class="warn">⚠ ${esc(s.auff)}</div>`:""}
       ${(()=>{const b=behFor(s.id)[0];return b?`<div class="med">💊 ${fmtD(b.datum)} · ${esc(b.medikament)} ${wzBadge(b)}</div>`:""})()}
@@ -229,7 +239,7 @@ function detailHTML(){
     document.querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>lammForm(s,S.lamm.find(x=>x.id===b.dataset.l)));
   });
   return `<header><button class="back" id="bk">‹ Zurück</button>
-    <h1 style="margin:8px 0 0">${esc(s.nr||"?")} ${s.name?"· "+esc(s.name):""}</h1></header>
+    <h1 style="margin:8px 0 0">${esc(s.nr||"?")}</h1></header>
   <main>
     <div class="stats">
       <div class="stat"><b>${l.length}</b><span>Ablamm.</span></div>
@@ -237,17 +247,18 @@ function detailHTML(){
       <div class="stat"><b>${leb}</b><span>lebend</span></div>
       <div class="stat"><b>${l.length?(n/l.length).toFixed(1).replace(".",","):"–"}</b><span>Ø Lämmer</span></div>
     </div>
+    ${(()=>{const e=erloesSchaf(s.id),kp=Number(s.kaufpreis)||0;if(!kp)return"";return `<div class="card"><div class="finrow"><span>🛒 Kaufpreis</span><b style="color:var(--danger)">− ${eur(kp)}</b></div><div class="finrow"><span>💶 Erlöse aus Lämmern (${e.n})</span><b style="color:var(--acc)">+ ${eur(e.sum)}</b></div><div class="finrow" style="border:0"><b>Bilanz</b><b style="color:${e.sum-kp>=0?"var(--acc)":"var(--danger)"}">${eur(e.sum-kp)}</b></div></div>`})()}
+    ${(()=>{const e=erloesSchaf(s.id);return e.n&&!(Number(s.kaufpreis)>0)?`<div class="card" style="display:flex;justify-content:space-between;align-items:center"><span>💶 Erlöse aus Lämmern<br><span style="color:var(--mute);font-size:13px">${e.n} ${e.n===1?"Lamm":"Lämmer"} verkauft (zugeordnet)</span></span><b style="color:var(--acc);font-size:18px">${eur(e.sum)}</b></div>`:""})()}
     <h2>Stammdaten ${ro?"":`<button class="btn sec sm" id="ed">Bearbeiten</button>`}</h2>
     <div class="card"><dl>
       <dt>Ohrmarke</dt><dd>${esc(s.nr||"–")}</dd>
-      <dt>Name</dt><dd>${esc(s.name||"–")}</dd>
       <dt>Rasse</dt><dd>${esc(s.rasse||"–")}</dd>
       <dt>Geboren</dt><dd>${fmtD(s.geb)}${s.geb?` (${alter(s.geb)})`:""}</dd>
       <dt>Herkunft</dt><dd>${esc(s.herkunft||"–")}</dd>
       <dt>Züchter</dt><dd>${esc(s.zuechter||"–")}</dd>
       <dt>Zugang am</dt><dd>${fmtD(s.zugang)}</dd>
+      <dt>Kaufpreis</dt><dd>${Number(s.kaufpreis)>0?eur(s.kaufpreis):"–"}</dd>
       <dt>Vater</dt><dd>${esc(s.vater||"–")}</dd>
-      <dt>Mutter</dt><dd>${esc(s.mutter||"–")}</dd>
       <dt>Status</dt><dd>${s.status==="abgegangen"?"abgegangen"+(s.abgang?" am "+fmtD(s.abgang):"")+(s.abgangGrund?" – "+esc(s.abgangGrund):""):"aktiv"}</dd>
     </dl></div>
     ${s.auff?`<div class="card"><b style="color:var(--danger)">⚠ Auffälligkeiten</b><div style="white-space:pre-wrap;margin-top:4px">${esc(s.auff)}</div></div>`:""}
@@ -275,7 +286,7 @@ function behCard(b){return `<div class="card" ${S.db?`data-b="${esc(b.id)}" styl
   <div style="display:flex;justify-content:space-between;gap:8px;font-weight:600"><span>${esc(b.medikament)}</span><span>${fmtD(b.datum)}</span></div>
   <div style="color:var(--mute);font-size:14px">${tierText(b)}${b.grund?" · "+esc(b.grund):""}${b.dosis?" · "+esc(b.dosis):""}${b.von?" · "+esc(b.von):""}</div>
   ${wzBadge(b)}${b.notiz?`<div style="color:var(--mute);font-size:14px;margin-top:4px;white-space:pre-wrap">${esc(b.notiz)}</div>`:""}</div>`}
-function tabbar(){return `<nav class="tabbar">${[["list","🐑","Schafe"],["lm","🐣","Lämmer"],["beh","💊","Behandlungen"],["tb","🧹","Stallbuch"]].map(([k,i,t])=>`<button data-tab="${k}" class="${(S.tab||"list")===k?"on":""}"><b>${i}</b>${t}</button>`).join("")}</nav>`}
+function tabbar(){return `<nav class="tabbar">${[["list","🐑","Schafe"],["lm","🐣","Lämmer"],["beh","💊","Behandlung"],["tb","🧹","Stallbuch"],["fin","💶","Finanzen"]].map(([k,i,t])=>`<button data-tab="${k}" class="${(S.tab||"list")===k?"on":""}"><b>${i}</b>${t}</button>`).join("")}</nav>`}
 function bindTabs(){document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;S.view="list";render();scrollTo(0,0)});const dm=$("dm");if(dm)dm.onclick=dataMenu}
 function behHTML(){
   const all=S.beh.slice().sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
@@ -352,10 +363,13 @@ function behForm(b,pre){
 function lammAlter(d){if(!d)return"–";const t=Math.round((new Date(today())-new Date(d))/864e5);if(t<0)return"–";if(t<28)return t===1?"1 Tag":`${t} Tage`;if(t<91)return`${Math.floor(t/7)} Wochen`;const a=alter(d);return a}
 const LSTAT={lebend:["Lebend","#3f7a2e"],verkauft:["Verkauft","#b8862f"],tot:["Verendet / tot geb.","#b23b2b"]};
 const statGrp=st=>st==="verkauft"?"verkauft":(st==="verendet"||st==="tot geboren")?"tot":"lebend";
-function alleLaemmer(){const out=[];for(const l of S.lamm)(l.laemmer||[]).forEach((y,i)=>{const m=S.schafe.find(x=>x.id===l.schafId);out.push({...y,status:y.status||"lebend",i,datum:l.datum,lid:l.id,mutter:m,bock:l.bock})});return out.sort((a,b)=>(b.datum||"").localeCompare(a.datum||""))}
+function alleLaemmer(){const out=[];for(const l of S.lamm)(l.laemmer||[]).forEach((y,i)=>{const m=S.schafe.find(x=>x.id===l.schafId);out.push({...y,id:y.id||l.id+"_"+i,status:y.status||"lebend",i,datum:l.datum,lid:l.id,mutter:m,bock:l.bock})});return out.sort((a,b)=>(b.datum||"").localeCompare(a.datum||""))}
+function erloesMap(jahr){const m={};for(const f of S.fin){if(f.art!=="ein"||!(f.lammIds||[]).length)continue;if(jahr&&!(f.datum||"").startsWith(jahr))continue;const sh=(Number(f.betrag)||0)/f.lammIds.length;for(const id of f.lammIds){(m[id]=m[id]||{sum:0,fins:[]}).sum+=sh;m[id].fins.push(f)}}return m}
+function erloesSchaf(sid,jahr){const m=erloesMap(jahr);let sum=0,n=0;for(const l of S.lamm.filter(x=>x.schafId===sid))(l.laemmer||[]).forEach((y,i)=>{const e=m[y.id||l.id+"_"+i];if(e){sum+=e.sum;n++}});return{sum,n}}
+function lammLabel(y){return `${y.nr?esc(y.nr):"ohne Ohrmarke"} · ${y.sex==="m"?"♂":y.sex==="w"?"♀":"?"} · Mutter ${y.mutter?esc(y.mutter.nr):"?"} · geb. ${fmtD(y.datum)}`}
 function lebendeLaemmer(){return alleLaemmer().filter(y=>y.status==="lebend")}
 function lmHTML(){
-  const alle=alleLaemmer();S.lmf=S.lmf||"alle";S.lms=S.lms||"lebend";
+  const alle=alleLaemmer(),em=erloesMap();S.lmf=S.lmf||"alle";S.lms=S.lms||"lebend";
   const cnt=g=>alle.filter(y=>statGrp(y.status)===g).length;
   const grp=alle.filter(y=>statGrp(y.status)===S.lms);
   const list=grp.filter(y=>S.lmf==="alle"||y.sex===S.lmf);
@@ -370,7 +384,7 @@ function lmHTML(){
     <div class="info"><div class="name">${badge(y.status)}${y.nr?esc(y.nr):"ohne Ohrmarke"} <span style="font-weight:400;color:var(--mute)">· ${y.sex==="m"?"männlich":y.sex==="w"?"weiblich":"Geschlecht offen"}</span></div>
     <div class="sub">${y.status==="lebend"?`<b style="color:var(--ink)">${lammAlter(y.datum)}</b> · `:""}geb. ${fmtD(y.datum)}${y.gewicht?" · "+esc(y.gewicht)+" kg":""}</div>
     <div class="sub">Mutter: ${y.mutter?esc(y.mutter.nr+(y.mutter.name?" "+y.mutter.name:"")):"(gelöscht)"}${y.bock?" · Vater: "+esc(y.bock):""}</div>
-    ${y.bem?`<div class="med">${esc(y.bem)}</div>`:""}</div></div>`).join(""):`<div class="empty">${grp.length?"Keine Treffer.":leer}</div>`}
+    ${y.bem?`<div class="med">${esc(y.bem)}</div>`:""}${em[y.id]?`<div class="med" style="color:var(--acc);font-weight:600">💶 Erlös ${eur(em[y.id].sum)} (${fmtD(em[y.id].fins[0].datum)})</div>`:""}</div></div>`).join(""):`<div class="empty">${grp.length?"Keine Treffer.":leer}</div>`}
   ${S.lms==="lebend"?`<div class="note">Tipp: Antippen öffnet die Ablammung – dort kannst du den Status z. B. auf „verkauft“ ändern, dann wandert das Lamm in den Reiter „Verkauft“.</div>`:""}
   </main>`}
 function bindLm(){
@@ -410,7 +424,141 @@ function betriebForm(){
     try{store.betrieb=d;saveStore();closeSheet();refresh();toast("Gespeichert")}catch(x){fail(x)}};
 }
 
+/* ---------- Finanzen ---------- */
+const EIN_KAT=["Lammfleisch / Tierverkauf","Wolle","Zuschüsse / Förderung","Privateinlage","Sonstige Einnahmen"];
+const AUS_KAT=["Nachzucht","Futter & Mineral","Einstreu & Stroh","Tierarzt & Medikamente","Versicherungen","Beiträge & Gebühren","Fahrzeuge & Maschinen","Stall- & Weidebedarf","Dünger & Kalk","Pacht","Gebäude & Hütten","Sonstige Ausgaben"];
+const eur=n=>(Number(n)||0).toLocaleString("de-DE",{style:"currency",currency:"EUR"});
+function parseBetrag(v){v=String(v??"").replace(/[€\s ]/g,"");if(!v)return null;if(v.includes(","))v=v.replace(/\./g,"").replace(",",".");const n=parseFloat(v);return isNaN(n)?null:Math.round(Math.abs(n)*100)/100}
+function parseDatum(v){v=String(v??"").trim();let m=v.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2}|\d{4})$/);if(m){let y=m[3].length===2?"20"+m[3]:m[3];return `${y}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`}m=v.match(/^(\d{4})-(\d{2})-(\d{2})/);return m?`${m[1]}-${m[2]}-${m[3]}`:null}
+function guessKat(text,partner,ein){const t=(text+" "+(partner||"")).toLowerCase();
+  if(ein){if(/zuschuss|förder|prämie|beihilfe/.test(t))return EIN_KAT[2];if(/lamm|fleisch|schaf|tier|bock|aue/.test(t))return EIN_KAT[0];if(/wolle/.test(t))return EIN_KAT[1];if(/privat/.test(t))return EIN_KAT[3];return EIN_KAT[4]}
+  const r=[[/versicherung|rechtsschutz|haftpflicht|allianz/,3],[/pacht/,8],[/kaminkehrer|hütte|dach|gebäude/,9],[/stroh|einstreu|späne/,1],[/soja|salz|mineral|milchpulver|gerste|futter|hafer|heu|mais|leckstein|kraftfutter/,0],[/tierarzt|cydectin|impf|mittel|wurm|dr\.|medikament|klauen/,2],[/dünger|\bkas\b|kalk/,7],[/berufsgenossen|\bbg\b|beitrag|tierseuchenkasse|\btsk\b|gebühr|verband/,4],[/tüv|traktor|anhänger|diesel|reparatur|reifen|öl\b/,5],[/weidetor|zaun|schlauch|eimer|stall|tränke|netz|werkzeug|sackkarren/,6]];
+  if(/nachzucht|mutterschaf|zuchtschaf|jungschaf|zuchtbock|bock gekauft|kauf schaf/.test(t))return "Nachzucht";for(const[re,i]of r)if(re.test(t))return AUS_KAT[i+1];return "Sonstige Ausgaben"}
+const lammById=id=>alleLaemmer().find(y=>y.id===id);
+function finJahre(){const cur=new Date().getFullYear()+"";return[...new Set([cur,...S.fin.map(f=>(f.datum||"").slice(0,4)).filter(y=>/^\d{4}$/.test(y))])].sort().reverse()}
+function finJahr(){const j=finJahre();return j.includes(S.fyear)?S.fyear:j[0]}
+function nextNr(jahr){return S.fin.filter(f=>(f.datum||"").startsWith(jahr)).reduce((m,f)=>Math.max(m,Number(f.nr)||0),0)+1}
+function finHTML(){
+  const jahre=finJahre(),jahr=finJahr();S.ff=S.ff||"alle";
+  const yl=S.fin.filter(f=>(f.datum||"").startsWith(jahr));
+  const sum=a=>yl.filter(f=>f.art===a).reduce((n,f)=>n+(Number(f.betrag)||0),0);
+  const ein=sum("ein"),aus=sum("aus"),erg=ein-aus;
+  const kat=a=>{const g={};for(const f of yl.filter(x=>x.art===a))g[f.kategorie||"Ohne Kategorie"]=(g[f.kategorie||"Ohne Kategorie"]||0)+(Number(f.betrag)||0);return Object.entries(g).sort((x,y)=>y[1]-x[1])};
+  const katList=(a,col)=>{const k=kat(a),mx=Math.max(1,...k.map(x=>x[1]));return k.length?k.map(([n,v])=>`<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:14px"><span>${esc(n)}</span><b>${eur(v)}</b></div><div style="height:6px;background:var(--chip);border-radius:3px"><div style="height:6px;width:${(v/mx*100).toFixed(1)}%;background:${col};border-radius:3px"></div></div></div>`).join(""):`<div style="color:var(--mute);font-size:14px">Keine Einträge.</div>`};
+  const q=(S.fq||"").trim().toLowerCase();
+  let list=yl.filter(f=>S.ff==="alle"||f.art===S.ff);
+  if(q)list=list.filter(f=>[f.text,f.partner,f.kategorie,f.notiz].join(" ").toLowerCase().includes(q));
+  list.sort((a,b)=>(b.datum||"").localeCompare(a.datum||"")||(Number(b.nr)||0)-(Number(a.nr)||0));
+  return `<header><h1>💶 Finanzen <small></small><button class="btn sec sm" id="dm">💾</button></h1>
+    <input id="fq" type="search" placeholder="Suche: Text, Begünstigter, Kategorie …" value="${esc(S.fq||"")}">
+    <div class="chips">${[["alle","Alle"],["ein","Einnahmen"],["aus","Ausgaben"]].map(([k,t])=>`<button class="chip ${S.ff===k?"on":""}" data-ff="${k}">${t}</button>`).join("")}</div></header><main>
+  <div class="yearbar"><span>📅 Jahresübersicht</span><select id="fyr">${jahre.map(y=>`<option ${y===jahr?"selected":""}>${y}</option>`).join("")}</select></div>
+  <div class="card" style="padding:4px 16px">
+    <div class="finrow"><span>Einnahmen</span><b style="color:var(--acc)">${eur(ein)}</b></div>
+    <div class="finrow"><span>Ausgaben</span><b style="color:var(--danger)">${eur(aus)}</b></div>
+    <div class="finrow" style="border-bottom:0;font-size:18px"><span><b>Ergebnis</b></span><b style="color:${erg>=0?"var(--acc)":"var(--danger)"}">${eur(erg)}</b></div></div>
+  <details class="card"><summary><b>Ausgaben nach Kategorie</b></summary>${katList("aus","var(--danger)")}</details>
+  <details class="card"><summary><b>Einnahmen nach Kategorie</b></summary>${katList("ein","var(--acc)")}</details>
+  <details class="card"><summary><b>Lämmer & Erlöse je Mutterschaf</b></summary>${(()=>{const m=erloesMap(jahr);
+    const rows=S.schafe.map(sf=>{let geb=0,vk=0,sum=0;for(const l of S.lamm.filter(x=>x.schafId===sf.id)){const inY=(l.datum||"").startsWith(jahr);(l.laemmer||[]).forEach((y,i)=>{if(inY)geb++;const e=m[y.id||l.id+"_"+i];if(e){vk++;sum+=e.sum}})}return{sf,geb,vk,sum}}).filter(r=>r.geb||r.vk).sort((a,b)=>b.sum-a.sum||b.geb-a.geb);
+    return rows.length?`<table class="ftab"><tr><th>Mutterschaf</th><th>Lämmer ${jahr}</th><th>verk.</th><th>Erlös</th></tr>${rows.map(r=>`<tr data-id="${esc(r.sf.id)}"><td>${esc(r.sf.nr)}</td><td>${r.geb}</td><td>${r.vk}</td><td><b>${r.sum?eur(r.sum):"–"}</b></td></tr>`).join("")}</table><div style="color:var(--mute);font-size:12px;margin-top:6px">Erlös = Einnahmen ${jahr}, bei denen Lämmer per Ohrmarke zugeordnet wurden (bei mehreren Lämmern anteilig).</div>`:`<div style="color:var(--mute);font-size:14px;margin-top:6px">Noch keine Daten. Ordne bei einer Einnahme (z. B. Lammfleisch) die Lämmer per Ohrmarke zu.</div>`})()}</details>
+  <div class="row" style="margin:6px 0 4px">${S.db?`<label class="btn sec sm" style="text-align:center;color:var(--ink);margin:0">📥 Excel-Liste importieren<input type="file" accept=".csv,text/csv,text/plain" id="fim" style="display:none"></label>`:""}<button class="btn sec sm" id="fex">📊 Export ${jahr}</button></div>
+  <h2>Buchungen ${jahr} <span style="font-size:14px;color:var(--mute);font-family:inherit">${list.length}</span></h2>
+  ${list.length?list.map(f=>`<div class="card finitem" data-fin="${esc(f.id)}">
+    <div class="finnr">${esc(f.nr??"")}</div>
+    <div class="info"><div class="name">${esc(f.text)}</div><div class="sub">${fmtD(f.datum)}${f.partner?" · "+esc(f.partner):""}</div><div class="med">${esc(f.kategorie||"")}${f.schafId?` · 🐑 verknüpft`:""}${(f.lammIds||[]).length?` · 🐣 ${f.lammIds.map(id=>{const y=lammById(id);return y?esc(y.nr||"o. Ohrmarke"):"?"}).join(", ")}`:""}</div></div>
+    <div class="finbetrag" style="color:${f.art==="ein"?"var(--acc)":"var(--danger)"}">${f.art==="ein"?"+":"−"} ${eur(f.betrag)}</div></div>`).join(""):`<div class="empty">${yl.length?"Keine Treffer.":`Noch keine Buchungen für ${jahr}.<br>Tippe auf „+ Buchung“ oder importiere deine Excel-Liste.`}</div>`}
+  </main>${S.db?`<button class="fab" id="addf">+ Buchung</button>`:""}`}
+function bindFin(){
+  const a=$("addf");if(a)a.onclick=()=>finForm();
+  document.querySelectorAll("[data-fin]").forEach(x=>x.onclick=()=>finForm(S.fin.find(y=>y.id===x.dataset.fin)));
+  document.querySelectorAll(".ftab [data-id]").forEach(r=>r.onclick=()=>{S.sel=r.dataset.id;S.view="detail";render();scrollTo(0,0)});
+  document.querySelectorAll("[data-ff]").forEach(b=>b.onclick=()=>{S.ff=b.dataset.ff;render()});
+  const y=$("fyr");if(y)y.onchange=()=>{S.fyear=y.value;render()};
+  const fq=$("fq");if(fq)fq.oninput=()=>{S.fq=fq.value;const p=fq.selectionStart;render();const n=$("fq");n.focus();n.setSelectionRange(p,p)};
+  const fim=$("fim");if(fim)fim.onchange=e=>{if(e.target.files[0])importFinCSV(e.target.files[0]);e.target.value=""};
+  $("fex").onclick=exportFinCSV;
+}
+function finForm(f){
+  const neu=!f;f=f||{art:"aus",datum:today()};let art=f.art;
+  const partners=[...new Set(S.fin.map(x=>x.partner).filter(Boolean))].sort();
+  const texte=[...new Set(S.fin.map(x=>x.text).filter(Boolean))].slice(-200);
+  const katOpts=()=>(art==="ein"?EIN_KAT:AUS_KAT).map(k=>`<option ${f.kategorie===k?"selected":""}>${k}</option>`).join("");
+  openSheet(`<h3>${neu?"Neue Buchung":"Buchung bearbeiten"}${f.nr?` <span style="color:var(--mute);font-size:15px">Nr. ${esc(f.nr)}</span>`:""}</h3>${f.schafId?`<div class="note" style="margin-top:8px">🐑 Verknüpft mit Mutterschaf ${esc((S.schafe.find(x=>x.id===f.schafId)||{}).nr||"(gelöscht)")} – ein geänderter Betrag wird dort als Kaufpreis übernommen.</div>`:""}<form id="f">
+    <div class="seg" style="margin-top:10px"><button type="button" class="chip" id="aE">＋ Einnahme</button><button type="button" class="chip" id="aA">− Ausgabe</button></div>
+    <div class="row"><div><label>Datum *</label><input type="date" name="datum" required value="${esc(f.datum)}"></div>
+    <div><label>Betrag (€) *</label><input name="betrag" required inputmode="decimal" placeholder="0,00" value="${f.betrag!=null?String(f.betrag).replace(".",","):""}"></div></div>
+    <label>Beschreibung *</label><input name="text" required list="ftl" value="${esc(f.text)}" placeholder="z. B. 2x Sojaschrot 25 kg"><datalist id="ftl">${texte.map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
+    <label>Kategorie</label><select name="kategorie" id="fkat">${katOpts()}</select>
+    <label id="plab">${art==="ein"?"Käufer / Zahler":"Begünstigter"}</label><input name="partner" list="fpl" value="${esc(f.partner)}"><datalist id="fpl">${partners.map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
+    <div id="lmpick"></div>
+    <label>Notiz</label><textarea name="notiz">${esc(f.notiz)}</textarea>
+    <div class="acts">${neu?"":`<button type="button" class="btn del" id="del">Löschen</button>`}<button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div></form>`);
+  const lsel=new Set(f.lammIds||[]);let lq="",setVk=true;
+  const anderswo=new Set(S.fin.filter(x=>x.id!==f.id).flatMap(x=>x.lammIds||[]));
+  const drawPick=()=>{const box=$("lmpick");if(art!=="ein"){box.innerHTML="";return}
+    const cand=alleLaemmer().filter(y=>lsel.has(y.id)||(!anderswo.has(y.id)&&(y.status==="lebend"||y.status==="verkauft")));
+    const list=cand.filter(y=>!lq||[y.nr,y.mutter&&y.mutter.nr].join(" ").toLowerCase().includes(lq)).sort((a,b)=>(lsel.has(b.id)-lsel.has(a.id))||(b.datum||"").localeCompare(a.datum||""));
+    box.innerHTML=`<label>🐣 Verkaufte Lämmer zuordnen (Ohrmarke) – optional</label>
+      <div class="row" style="align-items:center"><input id="lpq" type="search" placeholder="Ohrmarke suchen …" value="${esc(lq)}"><div style="flex:none;color:var(--mute);font-size:14px">${lsel.size} gewählt</div></div>
+      <div class="chklist">${list.map(y=>`<label class="ck"><input type="checkbox" data-lp="${esc(y.id)}" ${lsel.has(y.id)?"checked":""}><span>${lammLabel(y)}${y.status!=="lebend"?` <span style="color:var(--mute);font-size:12px">(${esc(y.status)})</span>`:""}</span></label>`).join("")||`<div style="color:var(--mute);padding:12px 4px;font-size:14px">Keine passenden Lämmer.</div>`}</div>
+      ${lsel.size?`<label class="ck" style="border:0"><input type="checkbox" id="lvk" ${setVk?"checked":""}><span>Status dieser Lämmer auf „verkauft“ setzen</span></label>`:""}`;
+    const q=$("lpq");q.oninput=()=>{lq=q.value.toLowerCase();const p=q.selectionStart;drawPick();const n=$("lpq");n.focus();n.setSelectionRange(p,p)};
+    document.querySelectorAll("[data-lp]").forEach(c=>c.onchange=()=>{c.checked?lsel.add(c.dataset.lp):lsel.delete(c.dataset.lp);drawPick()});
+    const v=$("lvk");if(v)v.onchange=()=>{setVk=v.checked}};
+  const setArt=v=>{drawPick&&setTimeout(drawPick);art=v;$("aE").classList.toggle("on",v==="ein");$("aA").classList.toggle("on",v==="aus");$("fkat").innerHTML=katOpts();$("plab").textContent=v==="ein"?"Käufer / Zahler":"Begünstigter";if(neu)autoKat()};
+  let katTouched=!neu;$("fkat").onchange=()=>{katTouched=true};
+  const autoKat=()=>{if(katTouched)return;const t=document.querySelector("[name=text]").value,p=document.querySelector("[name=partner]").value;if(t)$("fkat").value=guessKat(t,p,art==="ein")};
+  document.querySelector("[name=text]").addEventListener("input",autoKat);document.querySelector("[name=partner]").addEventListener("input",autoKat);
+  $("aE").onclick=()=>setArt("ein");$("aA").onclick=()=>setArt("aus");setArt(art);
+  $("cx").onclick=closeSheet;
+  if(!neu)armDelete($("del"),async()=>{try{await S.db.doc("finanzen/"+f.id).delete();
+    if(f.schafId){const sf=S.schafe.find(x=>x.id===f.schafId);if(sf&&sf.finId===f.id){const{id:_,finId,...rest}=sf;await S.db.doc("schafe/"+sf.id).set({...rest,kaufpreis:null})}}
+    closeSheet();toast("Gelöscht")}catch(x){fail(x)}});
+  $("f").onsubmit=async ev=>{ev.preventDefault();const d=Object.fromEntries(new FormData(ev.target));for(const k in d)d[k]=String(d[k]).trim();
+    const b=parseBetrag(d.betrag);if(b===null){toast("Bitte gültigen Betrag eingeben");return}
+    const body={...d,art,lammIds:art==="ein"?[...lsel]:[],betrag:b,nr:f.nr&&(f.datum||"").slice(0,4)===d.datum.slice(0,4)?f.nr:nextNr(d.datum.slice(0,4)),geaendert:new Date().toISOString()};
+    if(f.schafId)body.schafId=f.schafId;
+    try{if(neu)await S.db.collection("finanzen").add(body);else await S.db.doc("finanzen/"+f.id).set(body);
+      if(f.schafId){const sf=S.schafe.find(x=>x.id===f.schafId);if(sf&&Number(sf.kaufpreis)!==b){const{id:_,...rest}=sf;await S.db.doc("schafe/"+sf.id).set({...rest,kaufpreis:b,geaendert:new Date().toISOString()})}}
+      if(setVk&&body.lammIds.length){for(const l of S.lamm){let ch=false;const ls=(l.laemmer||[]).map((y,i)=>{const id=y.id||l.id+"_"+i;if(body.lammIds.includes(id)&&(y.status||"lebend")==="lebend"){ch=true;return{...y,id,status:"verkauft"}}return{...y,id}});
+        if(ch){const{id,...rest}=l;await S.db.doc("lammungen/"+l.id).set({...rest,laemmer:ls,geaendert:new Date().toISOString()})}}}
+      S.fyear=d.datum.slice(0,4);closeSheet();toast("Gespeichert")}catch(x){fail(x)}};
+}
+function parseCSV(text){text=text.replace(/^﻿/,"");const first=text.split(/\r?\n/).find(l=>/datum/i.test(l))||text.split(/\r?\n/)[0];
+  const del=[";","\t",","].sort((a,b)=>first.split(b).length-first.split(a).length)[0];
+  const rows=[];let row=[],cell="",q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){cell+='"';i++}else q=false}else cell+=c}
+    else if(c==='"')q=true;else if(c===del){row.push(cell);cell=""}else if(c==="\n"||c==="\r"){if(c==="\r"&&text[i+1]==="\n")i++;row.push(cell);rows.push(row);row=[];cell=""}else cell+=c}
+  if(cell||row.length){row.push(cell);rows.push(row)}return rows}
+async function importFinCSV(file){
+  const text=await file.text();const rows=parseCSV(text);
+  const hi=rows.findIndex(r=>r.some(c=>/^\s*datum\s*$/i.test(c))&&r.some(c=>/einnahm|ausgab/i.test(c)));
+  if(hi<0){toast("Spalten „Datum“ und „Einnahme/Ausgabe“ nicht gefunden");return}
+  const h=rows[hi].map(c=>c.trim().toLowerCase()),col=re=>h.findIndex(c=>re.test(c));
+  const cN=col(/lfd|^nr/),cD=col(/^datum/),cT=col(/kategorie|beschreibung|text|verwendung|bezeichnung/),cE=col(/einnahm/),cA=col(/ausgab/),cP=col(/begünstig|partner|empfänger|käufer|lieferant/);
+  const key=f=>[f.datum,(f.text||"").toLowerCase().trim(),f.art,Number(f.betrag).toFixed(2)].join("|");
+  const seen=new Set(S.fin.map(key));let n=0,skip=0;const neu=[];
+  for(const r of rows.slice(hi+1)){const datum=parseDatum(r[cD]);if(!datum)continue;
+    const e=cE>=0?parseBetrag(r[cE]):null,a=cA>=0?parseBetrag(r[cA]):null;if(e===null&&a===null)continue;
+    const art=e!==null?"ein":"aus",betrag=e!==null?e:a,txt=(cT>=0?r[cT]:"").trim(),partner=(cP>=0?r[cP]:"").trim();
+    const f={art,betrag,datum,text:txt||"(ohne Text)",partner,kategorie:guessKat(txt,partner,art==="ein"),nr:cN>=0&&/^\d+$/.test((r[cN]||"").trim())?Number(r[cN]):null,notiz:"",geaendert:new Date().toISOString()};
+    if(seen.has(key(f))){skip++;continue}seen.add(key(f));neu.push(f)}
+  const mx={};for(const f of [...S.fin,...neu])if(f.nr!=null){const y=f.datum.slice(0,4);mx[y]=Math.max(mx[y]||0,Number(f.nr)||0)}
+  for(const f of neu){if(f.nr==null){const y=f.datum.slice(0,4);f.nr=mx[y]=(mx[y]||0)+1}store.finanzen[newId()]=f;n++}
+  saveStore();refresh();if(neu[0])S.fyear=neu[0].datum.slice(0,4);render();
+  toast(`${n} Buchungen importiert${skip?`, ${skip} schon vorhanden`:""}`)}
+function exportFinCSV(){const jahr=finJahr();
+  const yl=S.fin.filter(f=>(f.datum||"").startsWith(jahr)).sort((a,b)=>(Number(a.nr)||0)-(Number(b.nr)||0)||(a.datum||"").localeCompare(b.datum||""));
+  const num=v=>v==null||v===""?"":Number(v).toFixed(2).replace(".",",");
+  const ein=yl.filter(f=>f.art==="ein").reduce((n,f)=>n+f.betrag,0),aus=yl.filter(f=>f.art==="aus").reduce((n,f)=>n+f.betrag,0);
+  const rows=[["Jahresübersicht "+jahr],["Einnahmen",num(ein)],["Ausgaben",num(aus)],["Ergebnis",num(ein-aus)],[],["Lfd.Nr.","Datum","Beschreibung","Kategorie","Einnahme","Ausgabe","Begünstigter","Lämmer (Ohrmarken)","Notiz"]];
+  for(const f of yl)rows.push([f.nr,fmtD(f.datum),f.text,f.kategorie,f.art==="ein"?num(f.betrag):"",f.art==="aus"?num(f.betrag):"",f.partner,(f.lammIds||[]).map(id=>{const y=lammById(id);return y?(y.nr||"ohne Ohrmarke"):""}).join(", "),f.notiz]);
+  download(`finanzen_${jahr}_${stamp()}.csv`,"﻿"+rows.map(r=>r.map(csvCell).join(";")).join("\r\n"),"text/csv")}
+
 /* ---------- sheets ---------- */
+
 function openSheet(html){$("sheet").innerHTML=html;$("ov").classList.add("open");document.body.style.overflow="hidden"}
 function closeSheet(){$("ov").classList.remove("open");document.body.style.overflow=""}
 $("ov").addEventListener("click",e=>{if(e.target.id==="ov")closeSheet()});
@@ -420,15 +568,15 @@ function eweForm(s){
   s=s||{status:"aktiv",rasse:RASSEN[0]};
   openSheet(`<h3>${s.id?"Mutterschaf bearbeiten":"Neues Mutterschaf"}</h3>
   <form id="f">
-    <div class="row"><div><label>Ohrmarke / Nr. *</label><input name="nr" required value="${esc(s.nr)}"></div>
-    <div><label>Name</label><input name="name" value="${esc(s.name)}"></div></div>
-    <label>Rasse</label><select name="rasse">${RASSEN.map(r=>`<option ${s.rasse===r?"selected":""}>${r}</option>`).join("")}</select>
+    <label>Ohrmarkennr. *</label><input name="nr" required value="${esc(s.nr)}" placeholder="z. B. DE 09 187 …">
+    <label>Rasse *</label><select name="rasse" required>${RASSEN.map(r=>`<option ${s.rasse===r?"selected":""}>${r}</option>`).join("")}</select>
     <div class="row"><div><label>Geburtsdatum</label><input type="date" name="geb" value="${esc(s.geb)}"></div>
-    <div><label>Zugang am</label><input type="date" name="zugang" value="${esc(s.zugang)}"></div></div>
-    <label>Herkunft (Betrieb / Ort / eigene Nachzucht)</label><input name="herkunft" value="${esc(s.herkunft)}">
-    <label>Züchter</label><input name="zuechter" value="${esc(s.zuechter)}">
-    <div class="row"><div><label>Vater (Bock)</label><input name="vater" value="${esc(s.vater)}"></div>
-    <div><label>Mutter</label><input name="mutter" value="${esc(s.mutter)}"></div></div>
+    <div><label>Zugang am *</label><input type="date" name="zugang" required value="${esc(s.zugang)}"></div></div>
+    <label>Herkunft * (Betrieb / Ort / eigene Nachzucht)</label><input name="herkunft" required value="${esc(s.herkunft)}">
+    <label>Züchter *</label><input name="zuechter" required value="${esc(s.zuechter)}">
+    <label>Kaufpreis (€)</label><input name="kaufpreis" inputmode="decimal" placeholder="leer lassen bei eigener Nachzucht" value="${s.kaufpreis!=null&&s.kaufpreis!==""?String(s.kaufpreis).replace(".",","):""}">
+    <div style="color:var(--mute);font-size:12px;margin-top:4px">💶 Wird automatisch als Ausgabe „Nachzucht“ bei den Finanzen gebucht${s.finId&&S.fin.some(x=>x.id===s.finId)?" (bereits verknüpft – Änderungen werden übernommen)":""}.</div>
+    <label>Vater (Bock)</label><input name="vater" value="${esc(s.vater)}">
     <label>Auffälligkeiten (Klauen, Euter, Lahmheit, Charakter …)</label><textarea name="auff">${esc(s.auff)}</textarea>
     <label>Notizen</label><textarea name="notiz">${esc(s.notiz)}</textarea>
     <label>Status</label><select name="status"><option value="aktiv">aktiv</option><option value="abgegangen" ${s.status==="abgegangen"?"selected":""}>abgegangen</option></select>
@@ -442,11 +590,24 @@ function eweForm(s){
   $("f").onsubmit=async e=>{
     e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
     for(const k in d)d[k]=String(d[k]).trim();
-    d.geaendert=new Date().toISOString();
+    const kp=d.kaufpreis?parseBetrag(d.kaufpreis):null;
+    if(d.kaufpreis&&kp===null){toast("Bitte gültigen Kaufpreis eingeben");return}
+    d.kaufpreis=kp;d.geaendert=new Date().toISOString();
     try{
-      if(s.id)await S.db.doc("schafe/"+s.id).set({...d,angelegt:s.angelegt||d.geaendert});
-      else{d.angelegt=d.geaendert;const r=await S.db.collection("schafe").add(d);S.sel=r.id;S.view="detail"}
-      closeSheet();render();toast("Gespeichert")
+      const keep={};for(const k of ["angelegt","finId","name","mutter"])if(s[k]!=null)keep[k]=s[k];
+      let id=s.id;
+      if(id)await S.db.doc("schafe/"+id).set({...keep,...d,angelegt:s.angelegt||d.geaendert});
+      else{d.angelegt=d.geaendert;const r=await S.db.collection("schafe").add(d);id=r.id;S.sel=id;S.view="detail"}
+      // Verknüpfung Finanzen (Nachzucht)
+      const alt=s.finId&&S.fin.find(x=>x.id===s.finId);let msg="Gespeichert";
+      if(kp){const datum=d.zugang||today();const body={art:"aus",betrag:kp,datum,text:`Kauf Mutterschaf ${d.nr}`,kategorie:"Nachzucht",partner:d.zuechter,schafId:id,lammIds:[],notiz:alt?alt.notiz||"":"",
+          nr:alt&&(alt.datum||"").slice(0,4)===datum.slice(0,4)?alt.nr:nextNr(datum.slice(0,4)),geaendert:new Date().toISOString()};
+        let fid=alt?alt.id:null;
+        if(alt)await S.db.doc("finanzen/"+fid).set(body);else{const r=await S.db.collection("finanzen").add(body);fid=r.id}
+        if(fid!==s.finId){const cur=S.schafe.find(x=>x.id===id)||{...d};const{id:_,...rest}=cur;await S.db.doc("schafe/"+id).set({...rest,finId:fid})}
+        msg=alt?"Gespeichert · Ausgabe aktualisiert":"Gespeichert · Ausgabe bei Finanzen angelegt"}
+      else if(alt){await S.db.doc("finanzen/"+alt.id).delete();const cur=S.schafe.find(x=>x.id===id);if(cur){const{id:_,finId,...rest}=cur;await S.db.doc("schafe/"+id).set(rest)}msg="Gespeichert · Ausgabe entfernt"}
+      closeSheet();render();toast(msg)
     }catch(err){fail(err)}
   };
 }
@@ -487,7 +648,7 @@ function lammForm(s,l){
   $("f").onsubmit=async e=>{
     e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
     const body={schafId:s.id,datum:d.datum,bock:String(d.bock).trim(),verlauf:d.verlauf,notiz:String(d.notiz).trim(),
-      laemmer:lambs.map(y=>({sex:y.sex||"",nr:(y.nr||"").trim(),gewicht:(y.gewicht||"").trim().replace(".",","),status:y.status||"lebend",bem:(y.bem||"").trim()})),
+      laemmer:lambs.map(y=>({id:y.id||newId(),sex:y.sex||"",nr:(y.nr||"").trim(),gewicht:(y.gewicht||"").trim().replace(".",","),status:y.status||"lebend",bem:(y.bem||"").trim()})),
       geaendert:new Date().toISOString()};
     try{
       if(l.id)await S.db.doc("lammungen/"+l.id).set(body);else await S.db.collection("lammungen").add(body);
@@ -505,9 +666,10 @@ function fail(e){
 const KEY="herdenbuch-v1";
 const BETRIEB_START={};
 let store;
-function loadStore(){try{const o=JSON.parse(localStorage.getItem(KEY));if(o&&o.schafe&&o.lammungen){o.behandlungen=o.behandlungen||{};o.stallbuch=o.stallbuch||{};o.meta=o.meta||{};o.betrieb=o.betrieb||{...BETRIEB_START};return o}}catch(e){}return{schafe:{},lammungen:{},behandlungen:{},stallbuch:{},meta:{},betrieb:{...BETRIEB_START}}}
+function loadStore(){try{const o=JSON.parse(localStorage.getItem(KEY));if(o&&o.schafe&&o.lammungen){o.behandlungen=o.behandlungen||{};o.finanzen=o.finanzen||{};o.stallbuch=o.stallbuch||{};o.meta=o.meta||{};o.betrieb=o.betrieb||{...BETRIEB_START};return o}}catch(e){}return{schafe:{},lammungen:{},finanzen:{},behandlungen:{},stallbuch:{},meta:{},betrieb:{...BETRIEB_START}}}
 function saveStore(){store.meta=store.meta||{};store.meta.geaendert=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(store))}
-function refresh(){S.schafe=Object.entries(store.schafe).map(([id,d])=>({...d,id}));S.lamm=Object.entries(store.lammungen).map(([id,d])=>({...d,id}));S.beh=Object.entries(store.behandlungen).map(([id,d])=>({...d,id}));S.tb=Object.entries(store.stallbuch).map(([id,d])=>({...d,id}));render()}
+function ensureLambIds(o){for(const[lid,l]of Object.entries(o.lammungen||{}))(l.laemmer||[]).forEach((y,i)=>{if(!y.id)y.id=lid+"_"+i})}
+function refresh(){ensureLambIds(store);S.schafe=Object.entries(store.schafe).map(([id,d])=>({...d,id}));S.lamm=Object.entries(store.lammungen).map(([id,d])=>({...d,id}));S.beh=Object.entries(store.behandlungen).map(([id,d])=>({...d,id}));S.tb=Object.entries(store.stallbuch).map(([id,d])=>({...d,id}));S.fin=Object.entries(store.finanzen).map(([id,d])=>({...d,id}));render()}
 const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const localDb={
   doc(path){const[c,id]=path.split("/");return{
@@ -530,9 +692,9 @@ function exportCSV(){
   download(`herdenbuch_laemmer_${stamp()}.csv`,"﻿"+rows.map(r=>r.map(csvCell).join(";")).join("\r\n"),"text/csv")}
 function exportBestandCSV(){
   const akt=S.schafe.filter(x=>x.status!=="abgegangen").sort((a,b)=>String(a.nr||"").localeCompare(String(b.nr||""),"de",{numeric:true}));
-  const rows=[["Ohrmarke","Name","Rasse","Geburtsdatum","Alter","Herkunft","Züchter","Zugang am","Vater","Mutter","Auffälligkeiten","Notizen","Ablammungen","Lämmer gesamt","Letzte Ablammung","Letzte Behandlung","Medikament"]];
+  const rows=[["Ohrmarkennr.","Rasse","Geburtsdatum","Alter","Herkunft","Züchter","Zugang am","Kaufpreis","Vater","Auffälligkeiten","Notizen","Ablammungen","Lämmer gesamt","Lämmer verkauft (zugeordnet)","Erlöse Lämmer gesamt","Letzte Ablammung","Letzte Behandlung","Medikament"]];
   for(const x of akt){const l=lammFor(x.id),b=behFor(x.id)[0];
-    rows.push([x.nr,x.name,x.rasse,fmtD(x.geb),alter(x.geb),x.herkunft,x.zuechter,fmtD(x.zugang),x.vater,x.mutter,x.auff,x.notiz,l.length,l.reduce((n,y)=>n+(y.laemmer||[]).length,0),l[0]?fmtD(l[0].datum):"",b?fmtD(b.datum):"",b?b.medikament:""].map(v=>v==="–"?"":v))}
+    const er=erloesSchaf(x.id);rows.push([x.nr,x.rasse,fmtD(x.geb),alter(x.geb),x.herkunft,x.zuechter,fmtD(x.zugang),Number(x.kaufpreis)>0?Number(x.kaufpreis).toFixed(2).replace(".",","):"",x.vater,x.auff,x.notiz,l.length,l.reduce((n,y)=>n+(y.laemmer||[]).length,0),er.n,er.sum?er.sum.toFixed(2).replace(".",","):"",l[0]?fmtD(l[0].datum):"",b?fmtD(b.datum):"",b?b.medikament:""].map(v=>v==="–"?"":v))}
   download(`mutterschaf_bestand_${stamp()}.csv`,"\ufeff"+rows.map(r=>r.map(csvCell).join(";")).join("\r\n"),"text/csv");toast(`${akt.length} Mutterschafe exportiert`)}
 function exportBehCSV(){
   const rows=[["Datum","Medikament","Grund","Dosis","Wartezeit bis","Behandelt von","Charge/Beleg","Alle Tiere","Ohrmarke","Name","Notiz"]];
@@ -543,7 +705,7 @@ function importJSON(file){
   const fr=new FileReader();fr.onload=()=>{try{
     const inc=JSON.parse(fr.result);if(!inc.schafe||!inc.lammungen)throw 0;
     const del={...(store.deleted||{}),...(inc.deleted||{})};let n=0;
-    for(const c of ["schafe","lammungen","behandlungen","stallbuch"])for(const[id,d]of Object.entries(inc[c]||{})){
+    for(const c of ["schafe","lammungen","behandlungen","stallbuch","finanzen"])for(const[id,d]of Object.entries(inc[c]||{})){
       const cur=store[c][id];if(del[c+"/"+id])continue;
       if(!cur||(d.geaendert||"")>(cur.geaendert||"")){store[c][id]=d;n++}}
     for(const k of Object.keys(del)){const[c,id]=k.split("/");if(store[c])delete store[c][id]}
