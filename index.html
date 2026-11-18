@@ -89,6 +89,7 @@ main{padding-bottom:170px!important}
 .yearbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:2px}
 .yearbar span{font-size:14px;color:var(--mute);font-weight:600}
 .yearbar select{width:auto;padding:7px 34px 7px 12px;font-weight:700;color:var(--acc-d);border:2px solid var(--acc);border-radius:999px}
+.lmseg{margin-top:10px}.lmseg .chip{font-size:13px;padding:8px 6px;font-weight:600}
 /* ===== Design: Grünland ===== */
 :root{
   --bg:#eef3e6;--card:#ffffff;--ink:#1f2d1a;--mute:#5f6f55;--line:#d5e0c8;
@@ -349,22 +350,31 @@ function behForm(b,pre){
 }
 
 function lammAlter(d){if(!d)return"–";const t=Math.round((new Date(today())-new Date(d))/864e5);if(t<0)return"–";if(t<28)return t===1?"1 Tag":`${t} Tage`;if(t<91)return`${Math.floor(t/7)} Wochen`;const a=alter(d);return a}
-function lebendeLaemmer(){const out=[];for(const l of S.lamm)(l.laemmer||[]).forEach((y,i)=>{if((y.status||"lebend")==="lebend"){const m=S.schafe.find(x=>x.id===l.schafId);out.push({...y,i,datum:l.datum,lid:l.id,mutter:m,bock:l.bock})}});return out.sort((a,b)=>(b.datum||"").localeCompare(a.datum||""))}
+const LSTAT={lebend:["Lebend","#3f7a2e"],verkauft:["Verkauft","#b8862f"],tot:["Verendet / tot geb.","#b23b2b"]};
+const statGrp=st=>st==="verkauft"?"verkauft":(st==="verendet"||st==="tot geboren")?"tot":"lebend";
+function alleLaemmer(){const out=[];for(const l of S.lamm)(l.laemmer||[]).forEach((y,i)=>{const m=S.schafe.find(x=>x.id===l.schafId);out.push({...y,status:y.status||"lebend",i,datum:l.datum,lid:l.id,mutter:m,bock:l.bock})});return out.sort((a,b)=>(b.datum||"").localeCompare(a.datum||""))}
+function lebendeLaemmer(){return alleLaemmer().filter(y=>y.status==="lebend")}
 function lmHTML(){
-  const all=lebendeLaemmer();S.lmf=S.lmf||"alle";
-  const list=all.filter(y=>S.lmf==="alle"||y.sex===S.lmf);
-  const w=all.filter(y=>y.sex==="w").length,m=all.filter(y=>y.sex==="m").length;
-  return `<header><h1>🐣 Lämmer <small>${all.length} lebend</small><button class="btn sec sm" id="dm">💾</button></h1>
-    <div class="chips">${[["alle",`Alle (${all.length})`],["w",`♀ weiblich (${w})`],["m",`♂ männlich (${m})`]].map(([k,t])=>`<button class="chip ${S.lmf===k?"on":""}" data-lf="${k}">${t}</button>`).join("")}</div></header><main>
+  const alle=alleLaemmer();S.lmf=S.lmf||"alle";S.lms=S.lms||"lebend";
+  const cnt=g=>alle.filter(y=>statGrp(y.status)===g).length;
+  const grp=alle.filter(y=>statGrp(y.status)===S.lms);
+  const list=grp.filter(y=>S.lmf==="alle"||y.sex===S.lmf);
+  const w=grp.filter(y=>y.sex==="w").length,m=grp.filter(y=>y.sex==="m").length;
+  const badge=st=>{const c=st==="lebend"?"#3f7a2e":st==="verkauft"?"#b8862f":"#b23b2b";return `<span style="display:inline-block;background:${c};color:#fff;font-size:12px;font-weight:700;border-radius:6px;padding:2px 8px;margin-right:6px;vertical-align:2px">${esc(st.charAt(0).toUpperCase()+st.slice(1))}</span>`};
+  const leer={lebend:"Keine lebenden Lämmer erfasst.<br>Lämmer trägst du beim Mutterschaf unter „+ Ablammung“ ein.",verkauft:"Noch keine verkauften Lämmer.",tot:"Keine verendeten oder tot geborenen Lämmer."}[S.lms];
+  return `<header><h1>🐣 Lämmer <small>${cnt("lebend")} lebend</small><button class="btn sec sm" id="dm">💾</button></h1>
+    <div class="seg lmseg">${Object.entries(LSTAT).map(([k,[t]])=>`<button class="chip ${S.lms===k?"on":""}" data-ls="${k}">${t} (${cnt(k)})</button>`).join("")}</div>
+    <div class="chips">${[["alle",`Alle (${grp.length})`],["w",`♀ weiblich (${w})`],["m",`♂ männlich (${m})`]].map(([k,t])=>`<button class="chip ${S.lmf===k?"on":""}" data-lf="${k}">${t}</button>`).join("")}</div></header><main>
   ${list.length?list.map(y=>`<div class="card ewe" data-lm="${esc(y.lid)}">
     <div class="tag ${y.sex==="m"?"fuchs":""}" style="font-size:22px">${y.sex==="m"?"♂":y.sex==="w"?"♀":"?"}</div>
-    <div class="info"><div class="name">${y.nr?esc(y.nr):"ohne Ohrmarke"} <span style="font-weight:400;color:var(--mute)">· ${y.sex==="m"?"männlich":y.sex==="w"?"weiblich":"Geschlecht offen"}</span></div>
-    <div class="sub"><b style="color:var(--ink)">${lammAlter(y.datum)}</b> · geb. ${fmtD(y.datum)}${y.gewicht?" · "+esc(y.gewicht)+" kg":""}</div>
+    <div class="info"><div class="name">${badge(y.status)}${y.nr?esc(y.nr):"ohne Ohrmarke"} <span style="font-weight:400;color:var(--mute)">· ${y.sex==="m"?"männlich":y.sex==="w"?"weiblich":"Geschlecht offen"}</span></div>
+    <div class="sub">${y.status==="lebend"?`<b style="color:var(--ink)">${lammAlter(y.datum)}</b> · `:""}geb. ${fmtD(y.datum)}${y.gewicht?" · "+esc(y.gewicht)+" kg":""}</div>
     <div class="sub">Mutter: ${y.mutter?esc(y.mutter.nr+(y.mutter.name?" "+y.mutter.name:"")):"(gelöscht)"}${y.bock?" · Vater: "+esc(y.bock):""}</div>
-    ${y.bem?`<div class="med">${esc(y.bem)}</div>`:""}</div></div>`).join(""):`<div class="empty">${all.length?"Keine Treffer.":"Keine lebenden Lämmer erfasst.<br>Lämmer trägst du beim Mutterschaf unter „+ Ablammung“ ein."}</div>`}
-  <div class="note">Tipp: Antippen öffnet die Ablammung – dort kannst du z. B. den Status auf „verkauft“ ändern, dann verschwindet das Lamm aus dieser Liste.</div>
+    ${y.bem?`<div class="med">${esc(y.bem)}</div>`:""}</div></div>`).join(""):`<div class="empty">${grp.length?"Keine Treffer.":leer}</div>`}
+  ${S.lms==="lebend"?`<div class="note">Tipp: Antippen öffnet die Ablammung – dort kannst du den Status z. B. auf „verkauft“ ändern, dann wandert das Lamm in den Reiter „Verkauft“.</div>`:""}
   </main>`}
 function bindLm(){
+  document.querySelectorAll("[data-ls]").forEach(b=>b.onclick=()=>{S.lms=b.dataset.ls;S.lmf="alle";render()});
   document.querySelectorAll("[data-lf]").forEach(b=>b.onclick=()=>{S.lmf=b.dataset.lf;render()});
   document.querySelectorAll("[data-lm]").forEach(b=>b.onclick=()=>{const l=S.lamm.find(x=>x.id===b.dataset.lm);const m=l&&S.schafe.find(x=>x.id===l.schafId);if(l&&m&&S.db)lammForm(m,l)});
 }
