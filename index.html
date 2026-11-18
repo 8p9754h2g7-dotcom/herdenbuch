@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Herdenbuch</title>
+<meta name="theme-color" content="#2f6224">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Herdenbuch">
+<style>
+:root{
+  --bg:#f5f2ea;--card:#fffdf8;--ink:#2a2620;--mute:#776f62;--line:#e4ddcf;
+  --acc:#4a6b3a;--acc2:#b4652c;--danger:#a63a2a;--chip:#ece6d8;
+  --r:14px;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#1c1a17;--card:#262320;--ink:#efe9de;--mute:#a59d8f;--line:#3a3530;--acc:#8fb576;--acc2:#e09a5f;--danger:#e0705e;--chip:#332f2a}
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+h1{font-size:20px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+h1 small{font-weight:400;color:var(--mute);font-size:14px;margin-left:auto}
+.wrap{max-width:760px;margin:0 auto}
+main{padding:12px 16px 110px}
+input,select,textarea{width:100%;font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
+textarea{min-height:80px;resize:vertical}
+label{display:block;font-size:13px;color:var(--mute);margin:12px 0 4px}
+.row{display:flex;gap:10px}.row>*{flex:1;min-width:0}
+.chips{display:flex;gap:6px;overflow-x:auto;margin-top:8px;padding-bottom:2px}
+.chip{border:0;background:var(--chip);color:var(--ink);padding:7px 12px;border-radius:999px;font:inherit;font-size:14px;white-space:nowrap;cursor:pointer}
+.chip.on{background:var(--acc);color:#fff}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.ewe{display:flex;gap:12px;align-items:center;cursor:pointer}
+.ewe .tag{min-width:58px;height:58px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#fff;background:var(--acc);text-align:center;padding:4px;word-break:break-all}
+.ewe .tag.fuchs{background:var(--acc2)}
+.ewe .info{flex:1;min-width:0}
+.ewe .name{font-weight:600}
+.ewe .sub{color:var(--mute);font-size:14px}
+.warn{color:var(--danger);font-size:13px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{display:inline-block;font-size:12px;background:var(--chip);border-radius:6px;padding:2px 7px;margin-right:4px}
+.fab{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));background:var(--acc);color:#fff;border:0;border-radius:999px;padding:15px 22px;font:inherit;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer;z-index:6}
+.btn{border:0;border-radius:10px;padding:12px 16px;font:inherit;font-weight:600;cursor:pointer;background:var(--acc);color:#fff}
+.btn.sec{background:var(--chip);color:var(--ink)}
+.btn.del{background:transparent;color:var(--danger);border:1px solid var(--danger)}
+.btn.del.armed{background:var(--danger);color:#fff}
+.btn.sm{padding:8px 12px;font-size:14px}
+.empty{text-align:center;color:var(--mute);padding:40px 10px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}
+.stat{background:var(--chip);border-radius:10px;padding:10px 6px;text-align:center}
+.stat b{display:block;font-size:20px}.stat span{font-size:12px;color:var(--mute)}
+dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0}
+dt{color:var(--mute);font-size:14px}dd{margin:0}
+h2{font-size:17px;margin:18px 0 8px;display:flex;align-items:center;justify-content:space-between}
+.lamb{border-top:1px solid var(--line);padding:8px 0;font-size:15px}
+.lamb:first-child{border-top:0}
+.back{background:none;border:0;color:var(--acc);font:inherit;font-weight:600;padding:0;cursor:pointer}
+/* sheet */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:none;align-items:flex-end;justify-content:center}
+.ov.open{display:flex}
+.sheet{background:var(--bg);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+@media(min-width:700px){.ov{align-items:center}.sheet{border-radius:18px}}
+.sheet h3{margin:0 0 4px;font-size:18px}
+.acts{display:flex;gap:10px;margin-top:18px;position:sticky;bottom:-16px;background:var(--bg);padding:10px 0}
+.acts .btn{flex:1}
+.lambbox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px 12px 12px;margin-top:10px}
+.lambbox .hd{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-weight:600}
+.seg{display:flex;gap:6px}.seg .chip{flex:1;text-align:center}
+.note{background:var(--chip);border-radius:10px;padding:10px 12px;font-size:14px;color:var(--mute);margin-bottom:10px}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:7;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.tabbar button{flex:1;border:0;background:none;font:inherit;font-size:12px;color:var(--mute);padding:8px 0 9px;cursor:pointer}
+.tabbar button b{display:block;font-size:20px;line-height:1.2}
+.tabbar button.on{color:var(--acc);font-weight:600}
+.fab{bottom:calc(76px + env(safe-area-inset-bottom))!important}
+main{padding-bottom:170px!important}
+.ck{display:flex;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line);margin:0;color:var(--ink);font-size:15px;cursor:pointer}
+.ck input{width:22px;height:22px;flex:none}
+.chklist{max-height:300px;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:0 8px;margin-top:8px}
+.wz{display:inline-block;font-size:12px;background:var(--danger);color:#fff;border-radius:6px;padding:2px 7px}
+.med{color:var(--mute);font-size:13px;margin-top:2px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:150px;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:30;display:none}
+
+.yearbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:2px}
+.yearbar span{font-size:14px;color:var(--mute);font-weight:600}
+.yearbar select{width:auto;padding:7px 34px 7px 12px;font-weight:700;color:var(--acc-d);border:2px solid var(--acc);border-radius:999px}
+/* ===== Design: Grünland ===== */
+:root{
+  --bg:#eef3e6;--card:#ffffff;--ink:#1f2d1a;--mute:#5f6f55;--line:#d5e0c8;
+  --acc:#3f7a2e;--acc-d:#2a5620;--acc2:#b8692f;--danger:#b23b2b;--chip:#e2ebd6;--hay:#e9d9a6;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#141b11;--card:#1d2719;--ink:#e8efe0;--mute:#9fb090;--line:#2f3d29;--acc:#7cb562;--acc-d:#2a4a20;--acc2:#e0995f;--chip:#28351f;--hay:#4a4126}
+}
+body{background:var(--bg) radial-gradient(circle at 20% 0,rgba(63,122,46,.06),transparent 60%) fixed}
+h1,h2,h3,.stat b{font-family:"Rockwell","Roboto Slab","Georgia","Cambria",serif;letter-spacing:.2px}
+header{background:linear-gradient(160deg,#4d8a37 0%,#2f6224 70%,#264f1d 100%);color:#fff;border-bottom:0;padding-bottom:18px;box-shadow:0 2px 10px rgba(30,60,20,.25)}
+header::after{content:"";position:absolute;left:0;right:0;bottom:-11px;height:12px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 12' preserveAspectRatio='none'%3E%3Cpath d='M0 0h120v4c-10 0-10 7-20 7S90 4 80 4 70 11 60 11 50 4 40 4 30 11 20 11 10 4 0 4z' fill='%23264f1d'/%3E%3C/svg%3E") repeat-x;background-size:120px 12px;pointer-events:none}
+header h1{color:#fff;font-size:22px}
+header h1 small{color:rgba(255,255,255,.8)}
+header .btn.sec{background:rgba(255,255,255,.18);color:#fff}
+header input{background:rgba(255,255,255,.95);border:0;color:#1f2d1a;box-shadow:inset 0 1px 3px rgba(0,0,0,.15)}
+header .chip{background:rgba(255,255,255,.16);color:#fff}
+header .chip.on{background:#fff;color:var(--acc-d);font-weight:600}
+.back{color:#fff!important}
+main{padding-top:22px}
+.card{border-radius:16px;border:1px solid var(--line);box-shadow:0 1px 3px rgba(40,70,30,.08)}
+.ewe .tag{background:linear-gradient(145deg,#5a9a42,#2f6224);box-shadow:inset 0 -2px 0 rgba(0,0,0,.15)}
+.ewe .tag.fuchs{background:linear-gradient(145deg,#cf8346,#9a5422)}
+.stats{gap:10px}
+.stat{background:var(--card);border:1px solid var(--line);border-top:4px solid var(--acc);border-radius:12px;box-shadow:0 1px 3px rgba(40,70,30,.08)}
+.stat b{color:var(--acc-d);font-size:22px}
+@media (prefers-color-scheme:dark){.stat b{color:var(--acc)}}
+h2{color:var(--acc-d);border-bottom:2px solid var(--hay);padding-bottom:6px}
+@media (prefers-color-scheme:dark){h2{color:var(--acc)}}
+.btn{background:var(--acc);box-shadow:0 2px 0 var(--acc-d)}
+.btn.sec{box-shadow:none}
+.btn.del{box-shadow:none}
+.chip.on{background:var(--acc)}
+.fab{background:linear-gradient(160deg,#4d8a37,#2f6224);box-shadow:0 6px 18px rgba(30,70,20,.35)}
+.tabbar{background:#264f1d;border-top:0;box-shadow:0 -2px 12px rgba(20,40,15,.25)}
+.tabbar button{color:rgba(255,255,255,.65)}
+.tabbar button.on{color:#fff}
+.tabbar button.on b{transform:scale(1.15)}
+.tabbar button b{transition:transform .15s}
+.note{background:#f6efd6;color:#6b5a2a;border-left:4px solid #d8bf6a}
+@media (prefers-color-scheme:dark){.note{background:var(--hay);color:#efe3b8}}
+.empty{background:var(--card);border:2px dashed var(--line);border-radius:16px}
+.sheet{background:var(--bg);border-top:5px solid var(--acc)}
+.sheet h3{color:var(--acc-d);font-size:20px}
+@media (prefers-color-scheme:dark){.sheet h3{color:var(--acc)}}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--acc);outline-offset:0;border-color:var(--acc)}
+.lambbox{border-left:4px solid var(--hay)}
+.toast{background:var(--acc-d);color:#fff}
+</style>
+</head>
+<body>
+<div id="app" class="wrap"></div>
+<div class="ov" id="ov"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const RASSEN=["Weißes Bergschaf","Coburger Fuchs","Kreuzung","Sonstige"];
+const S={tab:"list",beh:[],tb:[],db:null,schafe:[],lamm:[],loaded:{s:false,l:false},err:null,view:"list",sel:null,q:"",filter:"alle",readonly:false};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtD=d=>{if(!d)return"–";const [y,m,t]=d.split("-");return t?`${t}.${m}.${y}`:d};
+function alter(geb){if(!geb)return"";const g=new Date(geb),n=new Date();let m=(n.getFullYear()-g.getFullYear())*12+(n.getMonth()-g.getMonth());if(n.getDate()<g.getDate())m--;if(m<0)return"";const j=Math.floor(m/12);return j>=1?`${j} J.${m%12?" "+(m%12)+" Mon.":""}`:`${m} Mon.`}
+function toast(t){const e=$("toast");e.textContent=t;e.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display="none",2200)}
+const lammFor=id=>S.lamm.filter(l=>l.schafId===id).sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
+
+/* ---------- render ---------- */
+function render(){
+  const app=$("app");
+  if(S.view==="detail"&&S.sel){app.innerHTML=detailHTML();return}
+  if(S.view==="betrieb"){app.innerHTML=betriebHTML();bindBetrieb();return}
+  if(S.tab==="beh"){app.innerHTML=behHTML()+tabbar();bindBeh();bindTabs();return}
+  if(S.tab==="lm"){app.innerHTML=lmHTML()+tabbar();bindLm();bindTabs();return}
+  if(S.tab==="tb"){app.innerHTML=tbHTML()+tabbar();bindTb();bindTabs();return}
+  const loading=!(S.loaded.s&&S.loaded.l);
+  let list=S.schafe.slice();
+  if(S.filter==="aktiv")list=list.filter(s=>s.status!=="abgegangen");
+  else if(S.filter==="abgegangen")list=list.filter(s=>s.status==="abgegangen");
+  else if(RASSEN.includes(S.filter))list=list.filter(s=>s.rasse===S.filter&&s.status!=="abgegangen");
+  if(S.filter==="alle")list=list.filter(s=>s.status!=="abgegangen");
+  const q=S.q.trim().toLowerCase();
+  if(q)list=list.filter(s=>[s.nr,s.name,s.zuechter,s.auff,s.rasse].join(" ").toLowerCase().includes(q));
+  list.sort((a,b)=>String(a.nr||"").localeCompare(String(b.nr||""),"de",{numeric:true}));
+  const aktiv=S.schafe.filter(s=>s.status!=="abgegangen").length;
+  const cur=new Date().getFullYear()+"";
+  const jahre=[...new Set([cur,...S.lamm.map(l=>(l.datum||"").slice(0,4)).filter(y=>/^\d{4}$/.test(y))])].sort().reverse();
+  const jahr=jahre.includes(S.year)?S.year:cur;
+  const lj=S.lamm.filter(l=>(l.datum||"").startsWith(jahr));
+  const lzahl=lj.reduce((n,l)=>n+(l.laemmer||[]).length,0);
+  app.innerHTML=`
+  <header>
+    <h1>🐑 Herdenbuch <small>${aktiv} Mutterschafe</small><button class="btn sec sm" id="bt" title="Betrieb">🏡</button><button class="btn sec sm" id="dm" title="Sichern / Einlesen">💾</button></h1>
+    <input id="q" type="search" placeholder="Suche: Ohrmarke, Name, Züchter …" value="${esc(S.q)}">
+    <div class="chips">${["alle",...RASSEN.slice(0,2),"abgegangen"].map(f=>`<button class="chip ${S.filter===f?"on":""}" data-f="${esc(f)}">${f==="alle"?"Alle aktiven":esc(f)}</button>`).join("")}</div>
+  </header>
+  <main>
+    ${S.err?`<div class="note">${esc(S.err)}</div>`:""}
+    ${S.readonly?`<div class="note">Nur Ansicht – du kannst hier nichts ändern.</div>`:""}
+    <div class="yearbar"><span>📅 Ablammungen im Jahr</span><select id="yr">${jahre.map(y=>`<option ${y===jahr?"selected":""}>${y}</option>`).join("")}</select></div>
+    <div class="stats">
+      <div class="stat"><b>${aktiv}</b><span>aktiv</span></div>
+      <div class="stat"><b>${lj.length}</b><span>Ablamm. ${jahr}</span></div>
+      <div class="stat"><b>${lzahl}</b><span>Lämmer ${jahr}</span></div>
+      <div class="stat"><b>${lj.length?(lzahl/lj.length).toFixed(2).replace(".",","):"–"}</b><span>Ø/Ablamm.</span></div>
+    </div>
+    ${loading&&!S.err?`<div class="empty">Daten werden geladen …</div>`:
+      list.length?list.map(eweCard).join(""):`<div class="empty">${S.schafe.length?"Keine Treffer.":"Noch keine Mutterschafe erfasst.<br>Tippe unten auf „+ Mutterschaf“."}</div>`}
+  </main>
+  ${S.readonly||!S.db?"":`<button class="fab" id="add">+ Mutterschaf</button>`}`+tabbar();bindTabs();
+  const qi=$("q");qi.oninput=e=>{S.q=e.target.value;const p=qi.selectionStart;render();const n=$("q");n.focus();n.setSelectionRange(p,p)};
+  app.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{S.filter=b.dataset.f;render()});
+  app.querySelectorAll("[data-id]").forEach(b=>b.onclick=()=>{S.sel=b.dataset.id;S.view="detail";render();scrollTo(0,0)});
+  const a=$("add");if(a)a.onclick=()=>eweForm();const bt=$("bt");if(bt)bt.onclick=()=>{S.view="betrieb";render();scrollTo(0,0)};const yr=$("yr");if(yr)yr.onchange=()=>{S.year=yr.value;render()};const dm=$("dm");if(dm)dm.onclick=dataMenu;
+}
+function eweCard(s){
+  const l=lammFor(s.id),n=l.reduce((k,x)=>k+(x.laemmer||[]).length,0);
+  return `<div class="card ewe" data-id="${esc(s.id)}">
+    <div class="tag ${s.rasse==="Coburger Fuchs"?"fuchs":""}">${esc(s.nr||"?")}</div>
+    <div class="info">
+      <div class="name">${esc(s.name||"Ohne Name")} ${s.status==="abgegangen"?'<span class="badge">abgegangen</span>':""}</div>
+      <div class="sub">${esc(s.rasse||"")}${s.geb?" · "+alter(s.geb):""} · ${l.length} Ablamm. / ${n} Lämmer</div>
+      ${s.auff?`<div class="warn">⚠ ${esc(s.auff)}</div>`:""}
+      ${(()=>{const b=behFor(s.id)[0];return b?`<div class="med">💊 ${fmtD(b.datum)} · ${esc(b.medikament)} ${wzBadge(b)}</div>`:""})()}
+    </div></div>`;
+}
+function detailHTML(){
+  const s=S.schafe.find(x=>x.id===S.sel);
+  if(!s){S.view="list";setTimeout(render);return""}
+  const l=lammFor(s.id),n=l.reduce((k,x)=>k+(x.laemmer||[]).length,0);
+  const leb=l.reduce((k,x)=>k+(x.laemmer||[]).filter(y=>y.status==="lebend").length,0);
+  const ro=S.readonly||!S.db;
+  setTimeout(()=>{
+    $("bk").onclick=()=>{S.view="list";render()};
+    const e=$("ed");if(e)e.onclick=()=>eweForm(s);
+    const a=$("al");if(a)a.onclick=()=>lammForm(s);
+    const ab=$("ab");if(ab)ab.onclick=()=>behForm(null,s.id);
+    document.querySelectorAll("[data-b]").forEach(x=>x.onclick=()=>behForm(S.beh.find(y=>y.id===x.dataset.b)));
+    document.querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>lammForm(s,S.lamm.find(x=>x.id===b.dataset.l)));
+  });
+  return `<header><button class="back" id="bk">‹ Zurück</button>
+    <h1 style="margin:8px 0 0">${esc(s.nr||"?")} ${s.name?"· "+esc(s.name):""}</h1></header>
+  <main>
+    <div class="stats">
+      <div class="stat"><b>${l.length}</b><span>Ablamm.</span></div>
+      <div class="stat"><b>${n}</b><span>Lämmer</span></div>
+      <div class="stat"><b>${leb}</b><span>lebend</span></div>
+      <div class="stat"><b>${l.length?(n/l.length).toFixed(1).replace(".",","):"–"}</b><span>Ø Lämmer</span></div>
+    </div>
+    <h2>Stammdaten ${ro?"":`<button class="btn sec sm" id="ed">Bearbeiten</button>`}</h2>
+    <div class="card"><dl>
+      <dt>Ohrmarke</dt><dd>${esc(s.nr||"–")}</dd>
+      <dt>Name</dt><dd>${esc(s.name||"–")}</dd>
+      <dt>Rasse</dt><dd>${esc(s.rasse||"–")}</dd>
+      <dt>Geboren</dt><dd>${fmtD(s.geb)}${s.geb?` (${alter(s.geb)})`:""}</dd>
+      <dt>Herkunft</dt><dd>${esc(s.herkunft||"–")}</dd>
+      <dt>Züchter</dt><dd>${esc(s.zuechter||"–")}</dd>
+      <dt>Zugang am</dt><dd>${fmtD(s.zugang)}</dd>
+      <dt>Vater</dt><dd>${esc(s.vater||"–")}</dd>
+      <dt>Mutter</dt><dd>${esc(s.mutter||"–")}</dd>
+      <dt>Status</dt><dd>${s.status==="abgegangen"?"abgegangen"+(s.abgang?" am "+fmtD(s.abgang):"")+(s.abgangGrund?" – "+esc(s.abgangGrund):""):"aktiv"}</dd>
+    </dl></div>
+    ${s.auff?`<div class="card"><b style="color:var(--danger)">⚠ Auffälligkeiten</b><div style="white-space:pre-wrap;margin-top:4px">${esc(s.auff)}</div></div>`:""}
+    ${s.notiz?`<div class="card"><b>Notizen</b><div style="white-space:pre-wrap;margin-top:4px">${esc(s.notiz)}</div></div>`:""}
+    <h2>Ablammungen ${ro?"":`<button class="btn sm" id="al">+ Ablammung</button>`}</h2>
+    ${l.length?l.map(x=>`<div class="card" ${ro?"":`data-l="${esc(x.id)}" style="cursor:pointer"`}>
+      <div style="display:flex;justify-content:space-between;font-weight:600"><span>${fmtD(x.datum)}</span><span>${(x.laemmer||[]).length} ${(x.laemmer||[]).length===1?"Lamm":"Lämmer"}</span></div>
+      <div class="sub" style="color:var(--mute);font-size:14px">${x.bock?"Bock: "+esc(x.bock)+" · ":""}${esc(x.verlauf||"")}</div>
+      ${(x.laemmer||[]).map(y=>`<div class="lamb">${y.sex==="m"?"♂ männlich":y.sex==="w"?"♀ weiblich":"?"}${y.nr?" · "+esc(y.nr):""}${y.gewicht?" · "+esc(y.gewicht)+" kg":""} · <span style="color:${y.status==="lebend"?"var(--acc)":"var(--danger)"}">${esc(y.status||"")}</span>${y.bem?`<div style="color:var(--mute);font-size:13px">${esc(y.bem)}</div>`:""}</div>`).join("")}
+      ${x.notiz?`<div style="color:var(--mute);font-size:14px;margin-top:6px;white-space:pre-wrap">${esc(x.notiz)}</div>`:""}
+    </div>`).join(""):`<div class="empty">Noch keine Ablammung erfasst.</div>`}
+    <h2>Behandlungen ${ro?"":`<button class="btn sm" id="ab">+ Behandlung</button>`}</h2>
+    ${(()=>{const bs=behFor(s.id);return bs.length?bs.map(behCard).join(""):`<div class="empty">Noch keine Behandlung erfasst.</div>`})()}
+  </main>`;
+}
+
+/* ---------- Behandlungen & Stallbuch ---------- */
+const today=()=>new Date().toISOString().slice(0,10);
+function vor(d){if(!d)return"";const n=Math.round((new Date(today())-new Date(d))/864e5);return n<0?"in "+(-n)+" Tagen":n===0?"heute":n===1?"gestern":`vor ${n} Tagen`}
+const behFor=id=>S.beh.filter(b=>(b.schafIds||[]).includes(id)).sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
+const wzBadge=b=>b.wartezeit&&b.wartezeit>=today()?`<span class="wz">Wartezeit bis ${fmtD(b.wartezeit)}</span>`:"";
+const schafName=id=>{const s=S.schafe.find(x=>x.id===id);return s?(s.nr+(s.name?" "+s.name:"")):"(gelöscht)"};
+function tierText(b){const n=(b.schafIds||[]).length;return b.alle?`alle Mutterschafe (${n})`:n<=3?(b.schafIds||[]).map(schafName).map(esc).join(", "):`${n} Mutterschafe`}
+function behCard(b){return `<div class="card" ${S.db?`data-b="${esc(b.id)}" style="cursor:pointer"`:""}>
+  <div style="display:flex;justify-content:space-between;gap:8px;font-weight:600"><span>${esc(b.medikament)}</span><span>${fmtD(b.datum)}</span></div>
+  <div style="color:var(--mute);font-size:14px">${tierText(b)}${b.grund?" · "+esc(b.grund):""}${b.dosis?" · "+esc(b.dosis):""}${b.von?" · "+esc(b.von):""}</div>
+  ${wzBadge(b)}${b.notiz?`<div style="color:var(--mute);font-size:14px;margin-top:4px;white-space:pre-wrap">${esc(b.notiz)}</div>`:""}</div>`}
+function tabbar(){return `<nav class="tabbar">${[["list","🐑","Schafe"],["lm","🐣","Lämmer"],["beh","💊","Behandlungen"],["tb","🧹","Stallbuch"]].map(([k,i,t])=>`<button data-tab="${k}" class="${(S.tab||"list")===k?"on":""}"><b>${i}</b>${t}</button>`).join("")}</nav>`}
+function bindTabs(){document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;S.view="list";render();scrollTo(0,0)});const dm=$("dm");if(dm)dm.onclick=dataMenu}
+function behHTML(){
+  const all=S.beh.slice().sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
+  const last={};for(const b of all){const k=(b.medikament||"").trim().toLowerCase();if(k&&!last[k])last[k]=b}
+  return `<header><h1>💊 Behandlungen <small>${all.length} Einträge</small><button class="btn sec sm" id="dm">💾</button></h1></header><main>
+  ${Object.keys(last).length?`<h2>Zuletzt je Medikament</h2><div class="card">${Object.values(last).map(b=>`<div class="lamb" data-b="${esc(b.id)}" style="cursor:pointer"><b>${esc(b.medikament)}</b> – ${fmtD(b.datum)} <span style="color:var(--mute)">(${vor(b.datum)})</span><div style="color:var(--mute);font-size:13px">${tierText(b)}</div>${wzBadge(b)}</div>`).join("")}</div>`:""}
+  <h2>Alle Behandlungen</h2>
+  ${all.length?all.map(behCard).join(""):`<div class="empty">Noch keine Behandlung erfasst.<br>Tippe auf „+ Behandlung“.</div>`}
+  </main>${S.db?`<button class="fab" id="addb">+ Behandlung</button>`:""}`}
+function bindBeh(){const a=$("addb");if(a)a.onclick=()=>behForm();document.querySelectorAll("[data-b]").forEach(x=>x.onclick=()=>behForm(S.beh.find(y=>y.id===x.dataset.b)))}
+const TB_VORSCHLAG=["Stall ausmisten","Einstreuen","Klauenpflege","Schur","Zaun kontrolliert","Tränken gereinigt","Futter gekauft","Weidewechsel","Tierarzt-Besuch"];
+function tbHTML(){
+  const all=S.tb.slice().sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
+  const last={};for(const e of all){const k=(e.taetigkeit||"").trim().toLowerCase();if(k&&!last[k])last[k]=e}
+  return `<header><h1>🧹 Stallbuch <small>${all.length} Einträge</small><button class="btn sec sm" id="dm">💾</button></h1></header><main>
+  ${Object.keys(last).length?`<h2>Zuletzt erledigt</h2><div class="card">${Object.values(last).map(e=>`<div class="lamb" style="display:flex;justify-content:space-between;gap:8px"><b>${esc(e.taetigkeit)}</b><span style="color:var(--mute)">${fmtD(e.datum)} · ${vor(e.datum)}</span></div>`).join("")}</div>`:""}
+  <h2>Alle Einträge</h2>
+  ${all.length?all.map(e=>`<div class="card" data-t="${esc(e.id)}" style="cursor:pointer"><div style="display:flex;justify-content:space-between;font-weight:600"><span>${esc(e.taetigkeit)}</span><span>${fmtD(e.datum)}</span></div>${e.notiz?`<div style="color:var(--mute);font-size:14px;white-space:pre-wrap">${esc(e.notiz)}</div>`:""}</div>`).join(""):`<div class="empty">Noch keine Einträge.<br>z. B. „Stall ausmisten“ – tippe auf „+ Eintrag“.</div>`}
+  </main>${S.db?`<button class="fab" id="addt">+ Eintrag</button>`:""}`}
+function bindTb(){const a=$("addt");if(a)a.onclick=()=>tbForm();document.querySelectorAll("[data-t]").forEach(x=>x.onclick=()=>tbForm(S.tb.find(y=>y.id===x.dataset.t)))}
+function tbForm(e){
+  e=e||{datum:today()};
+  const vs=[...new Set([...TB_VORSCHLAG,...S.tb.map(x=>x.taetigkeit).filter(Boolean)])];
+  openSheet(`<h3>${e.id?"Eintrag bearbeiten":"Neuer Stallbuch-Eintrag"}</h3><form id="f">
+    <label>Datum *</label><input type="date" name="datum" required value="${esc(e.datum)}">
+    <label>Tätigkeit *</label><input name="taetigkeit" required list="tbl" value="${esc(e.taetigkeit)}" placeholder="z. B. Stall ausmisten"><datalist id="tbl">${vs.map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
+    <div class="chips">${TB_VORSCHLAG.slice(0,6).map(v=>`<button type="button" class="chip" data-v="${esc(v)}">${esc(v)}</button>`).join("")}</div>
+    <label>Notiz</label><textarea name="notiz">${esc(e.notiz)}</textarea>
+    <div class="acts">${e.id?`<button type="button" class="btn del" id="del">Löschen</button>`:""}<button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div></form>`);
+  document.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{document.querySelector("[name=taetigkeit]").value=b.dataset.v});
+  $("cx").onclick=closeSheet;
+  if(e.id)armDelete($("del"),async()=>{try{await S.db.doc("stallbuch/"+e.id).delete();closeSheet();toast("Gelöscht")}catch(x){fail(x)}});
+  $("f").onsubmit=async ev=>{ev.preventDefault();const d=Object.fromEntries(new FormData(ev.target));for(const k in d)d[k]=String(d[k]).trim();d.geaendert=new Date().toISOString();
+    try{if(e.id)await S.db.doc("stallbuch/"+e.id).set(d);else await S.db.collection("stallbuch").add(d);closeSheet();toast("Gespeichert")}catch(x){fail(x)}};
+}
+function behForm(b,pre){
+  const aktive=S.schafe.filter(s=>s.status!=="abgegangen").sort((a,c)=>String(a.nr||"").localeCompare(String(c.nr||""),"de",{numeric:true}));
+  b=b||{datum:today(),alle:false,schafIds:pre?[pre]:[]};
+  const sel=new Set(b.schafIds||[]);let alle=!!b.alle,q="";
+  const meds=[...new Set(S.beh.map(x=>x.medikament).filter(Boolean))];
+  openSheet(`<h3>${b.id?"Behandlung bearbeiten":"Neue Behandlung"}</h3><form id="f">
+    <div class="row"><div><label>Datum *</label><input type="date" name="datum" required value="${esc(b.datum)}"></div>
+    <div><label>Wartezeit bis</label><input type="date" name="wartezeit" value="${esc(b.wartezeit)}"></div></div>
+    <label>Medikament *</label><input name="medikament" required list="ml" value="${esc(b.medikament)}" placeholder="z. B. Entwurmungsmittel"><datalist id="ml">${meds.map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
+    <div class="row"><div><label>Grund / Diagnose</label><input name="grund" value="${esc(b.grund)}" placeholder="z. B. Entwurmung"></div>
+    <div><label>Dosis / Menge</label><input name="dosis" value="${esc(b.dosis)}" placeholder="z. B. 5 ml oral"></div></div>
+    <div class="row"><div><label>Behandelt von</label><input name="von" value="${esc(b.von)}" placeholder="selbst / Tierarzt"></div>
+    <div><label>Charge / Beleg-Nr.</label><input name="charge" value="${esc(b.charge)}"></div></div>
+    <label>Welche Tiere?</label>
+    <div class="seg"><button type="button" class="chip" id="mAll">Alle aktiven (${aktive.length})</button><button type="button" class="chip" id="mEin">Einzelne auswählen</button></div>
+    <div id="tl"></div>
+    <label>Notiz</label><textarea name="notiz">${esc(b.notiz)}</textarea>
+    <div class="acts">${b.id?`<button type="button" class="btn del" id="del">Löschen</button>`:""}<button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div></form>`);
+  const drawT=()=>{
+    $("mAll").classList.toggle("on",alle);$("mEin").classList.toggle("on",!alle);
+    if(alle){$("tl").innerHTML=`<div class="note" style="margin-top:8px">Wird bei allen ${aktive.length} aktiven Mutterschafen eingetragen.</div>`;return}
+    const extra=[...sel].filter(id=>!aktive.some(a=>a.id===id)).map(id=>S.schafe.find(x=>x.id===id)).filter(Boolean);
+    const list=[...aktive,...extra].filter(s=>!q||[s.nr,s.name].join(" ").toLowerCase().includes(q));
+    $("tl").innerHTML=`<div class="row" style="margin-top:8px;align-items:center"><input id="tq" type="search" placeholder="Tier suchen …" value="${esc(q)}"><div style="flex:none;color:var(--mute);font-size:14px">${sel.size} gewählt</div></div>
+      <div class="chklist">${list.map(s=>`<label class="ck"><input type="checkbox" data-s="${esc(s.id)}" ${sel.has(s.id)?"checked":""}><span><b>${esc(s.nr)}</b> ${esc(s.name||"")} <span style="color:var(--mute);font-size:13px">${esc(s.rasse||"")}</span></span></label>`).join("")||`<div class="empty" style="padding:16px">Keine Tiere gefunden.</div>`}</div>`;
+    const tq=$("tq");tq.oninput=()=>{q=tq.value.toLowerCase();const p=tq.selectionStart;drawT();const n=$("tq");n.focus();n.setSelectionRange(p,p)};
+    document.querySelectorAll("[data-s]").forEach(c=>c.onchange=()=>{c.checked?sel.add(c.dataset.s):sel.delete(c.dataset.s);drawT()});
+  };
+  $("mAll").onclick=()=>{alle=true;drawT()};$("mEin").onclick=()=>{alle=false;drawT()};drawT();
+  $("cx").onclick=closeSheet;
+  if(b.id)armDelete($("del"),async()=>{try{await S.db.doc("behandlungen/"+b.id).delete();closeSheet();toast("Gelöscht")}catch(x){fail(x)}});
+  $("f").onsubmit=async ev=>{ev.preventDefault();const d=Object.fromEntries(new FormData(ev.target));for(const k in d)d[k]=String(d[k]).trim();
+    d.alle=alle;d.schafIds=alle?aktive.map(s=>s.id):[...sel];
+    if(!d.schafIds.length){toast("Bitte mindestens ein Tier auswählen");return}
+    d.geaendert=new Date().toISOString();
+    try{if(b.id)await S.db.doc("behandlungen/"+b.id).set(d);else await S.db.collection("behandlungen").add(d);closeSheet();toast("Gespeichert")}catch(x){fail(x)}};
+}
+
+function lammAlter(d){if(!d)return"–";const t=Math.round((new Date(today())-new Date(d))/864e5);if(t<0)return"–";if(t<28)return t===1?"1 Tag":`${t} Tage`;if(t<91)return`${Math.floor(t/7)} Wochen`;const a=alter(d);return a}
+function lebendeLaemmer(){const out=[];for(const l of S.lamm)(l.laemmer||[]).forEach((y,i)=>{if((y.status||"lebend")==="lebend"){const m=S.schafe.find(x=>x.id===l.schafId);out.push({...y,i,datum:l.datum,lid:l.id,mutter:m,bock:l.bock})}});return out.sort((a,b)=>(b.datum||"").localeCompare(a.datum||""))}
+function lmHTML(){
+  const all=lebendeLaemmer();S.lmf=S.lmf||"alle";
+  const list=all.filter(y=>S.lmf==="alle"||y.sex===S.lmf);
+  const w=all.filter(y=>y.sex==="w").length,m=all.filter(y=>y.sex==="m").length;
+  return `<header><h1>🐣 Lämmer <small>${all.length} lebend</small><button class="btn sec sm" id="dm">💾</button></h1>
+    <div class="chips">${[["alle",`Alle (${all.length})`],["w",`♀ weiblich (${w})`],["m",`♂ männlich (${m})`]].map(([k,t])=>`<button class="chip ${S.lmf===k?"on":""}" data-lf="${k}">${t}</button>`).join("")}</div></header><main>
+  ${list.length?list.map(y=>`<div class="card ewe" data-lm="${esc(y.lid)}">
+    <div class="tag ${y.sex==="m"?"fuchs":""}" style="font-size:22px">${y.sex==="m"?"♂":y.sex==="w"?"♀":"?"}</div>
+    <div class="info"><div class="name">${y.nr?esc(y.nr):"ohne Ohrmarke"} <span style="font-weight:400;color:var(--mute)">· ${y.sex==="m"?"männlich":y.sex==="w"?"weiblich":"Geschlecht offen"}</span></div>
+    <div class="sub"><b style="color:var(--ink)">${lammAlter(y.datum)}</b> · geb. ${fmtD(y.datum)}${y.gewicht?" · "+esc(y.gewicht)+" kg":""}</div>
+    <div class="sub">Mutter: ${y.mutter?esc(y.mutter.nr+(y.mutter.name?" "+y.mutter.name:"")):"(gelöscht)"}${y.bock?" · Vater: "+esc(y.bock):""}</div>
+    ${y.bem?`<div class="med">${esc(y.bem)}</div>`:""}</div></div>`).join(""):`<div class="empty">${all.length?"Keine Treffer.":"Keine lebenden Lämmer erfasst.<br>Lämmer trägst du beim Mutterschaf unter „+ Ablammung“ ein."}</div>`}
+  <div class="note">Tipp: Antippen öffnet die Ablammung – dort kannst du z. B. den Status auf „verkauft“ ändern, dann verschwindet das Lamm aus dieser Liste.</div>
+  </main>`}
+function bindLm(){
+  document.querySelectorAll("[data-lf]").forEach(b=>b.onclick=()=>{S.lmf=b.dataset.lf;render()});
+  document.querySelectorAll("[data-lm]").forEach(b=>b.onclick=()=>{const l=S.lamm.find(x=>x.id===b.dataset.lm);const m=l&&S.schafe.find(x=>x.id===l.schafId);if(l&&m&&S.db)lammForm(m,l)});
+}
+
+/* ---------- Betrieb ---------- */
+const BETRIEB_FELDER=[["betriebsnr","Betriebsnummer"],["inhaber","Betriebsinhaber / Name"],["strasse","Straße"],["plz","PLZ"],["ort","Ort"],["tel","Telefon"],["fax","Fax"],["mobil","Mobil"],["email","E-Mail"],["tierarzt","Hoftierarzt"],["tierarztTel","Tierarzt Telefon"],["notiz","Notizen (z. B. Tierseuchenkasse, Verband)"]];
+const betrieb=()=>store.betrieb||{};
+function betriebHTML(){
+  const b=betrieb(),v=k=>b[k]?esc(b[k]):"–";
+  const tl=k=>b[k]?`<a href="tel:${esc(b[k].replace(/[^\d+]/g,""))}" style="color:var(--acc);font-weight:600">${esc(b[k])}</a>`:"–";
+  return `<header><button class="back" id="bk">‹ Zurück</button><h1 style="margin:8px 0 0">🏡 Betrieb</h1></header><main>
+  <div class="card" style="text-align:center;padding:18px">
+    <div style="color:var(--mute);font-size:13px;font-weight:600">BETRIEBSNUMMER</div>
+    <div style="font-family:Rockwell,'Roboto Slab',Georgia,serif;font-size:26px;font-weight:700;color:var(--acc-d);letter-spacing:1px">${v("betriebsnr")}</div></div>
+  <h2>Anschrift ${S.db?`<button class="btn sec sm" id="be">Bearbeiten</button>`:""}</h2>
+  <div class="card"><div style="font-weight:600">${v("inhaber")}</div><div>${v("strasse")}</div><div>${esc(b.plz||"")} ${esc(b.ort||"")}</div></div>
+  <h2>Kontakt</h2>
+  <div class="card"><dl><dt>Telefon</dt><dd>${tl("tel")}</dd><dt>Fax</dt><dd>${v("fax")}</dd><dt>Mobil</dt><dd>${tl("mobil")}</dd>
+    <dt>E-Mail</dt><dd style="word-break:break-all">${b.email?`<a href="mailto:${esc(b.email)}" style="color:var(--acc);font-weight:600">${esc(b.email)}</a>`:"–"}</dd></dl></div>
+  <h2>Tierarzt</h2>
+  <div class="card"><dl><dt>Hoftierarzt</dt><dd>${v("tierarzt")}</dd><dt>Telefon</dt><dd>${tl("tierarztTel")}</dd></dl></div>
+  ${b.notiz?`<h2>Notizen</h2><div class="card" style="white-space:pre-wrap">${esc(b.notiz)}</div>`:""}
+  </main>`}
+function bindBetrieb(){$("bk").onclick=()=>{S.view="list";render()};const e=$("be");if(e)e.onclick=betriebForm}
+function betriebForm(){
+  const b=betrieb();
+  openSheet(`<h3>Betriebsdaten bearbeiten</h3><form id="f">
+    ${BETRIEB_FELDER.map(([k,t])=>k==="notiz"?`<label>${t}</label><textarea name="${k}">${esc(b[k])}</textarea>`:
+      `<label>${t}</label><input name="${k}" value="${esc(b[k])}" ${k==="email"?'type="email"':""} ${/tel|fax|mobil|plz|betriebsnr/i.test(k)?'inputmode="tel"':""}>`).join("")}
+    <div class="acts"><button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div></form>`);
+  $("cx").onclick=closeSheet;
+  $("f").onsubmit=ev=>{ev.preventDefault();const d=Object.fromEntries(new FormData(ev.target));for(const k in d)d[k]=String(d[k]).trim();d.geaendert=new Date().toISOString();
+    try{store.betrieb=d;saveStore();closeSheet();refresh();toast("Gespeichert")}catch(x){fail(x)}};
+}
+
+/* ---------- sheets ---------- */
+function openSheet(html){$("sheet").innerHTML=html;$("ov").classList.add("open");document.body.style.overflow="hidden"}
+function closeSheet(){$("ov").classList.remove("open");document.body.style.overflow=""}
+$("ov").addEventListener("click",e=>{if(e.target.id==="ov")closeSheet()});
+function armDelete(btn,fn){btn.onclick=()=>{if(btn.classList.contains("armed"))return fn();btn.classList.add("armed");btn.textContent="Wirklich löschen?";setTimeout(()=>{btn.classList.remove("armed");btn.textContent="Löschen"},4000)}}
+
+function eweForm(s){
+  s=s||{status:"aktiv",rasse:RASSEN[0]};
+  openSheet(`<h3>${s.id?"Mutterschaf bearbeiten":"Neues Mutterschaf"}</h3>
+  <form id="f">
+    <div class="row"><div><label>Ohrmarke / Nr. *</label><input name="nr" required value="${esc(s.nr)}"></div>
+    <div><label>Name</label><input name="name" value="${esc(s.name)}"></div></div>
+    <label>Rasse</label><select name="rasse">${RASSEN.map(r=>`<option ${s.rasse===r?"selected":""}>${r}</option>`).join("")}</select>
+    <div class="row"><div><label>Geburtsdatum</label><input type="date" name="geb" value="${esc(s.geb)}"></div>
+    <div><label>Zugang am</label><input type="date" name="zugang" value="${esc(s.zugang)}"></div></div>
+    <label>Herkunft (Betrieb / Ort / eigene Nachzucht)</label><input name="herkunft" value="${esc(s.herkunft)}">
+    <label>Züchter</label><input name="zuechter" value="${esc(s.zuechter)}">
+    <div class="row"><div><label>Vater (Bock)</label><input name="vater" value="${esc(s.vater)}"></div>
+    <div><label>Mutter</label><input name="mutter" value="${esc(s.mutter)}"></div></div>
+    <label>Auffälligkeiten (Klauen, Euter, Lahmheit, Charakter …)</label><textarea name="auff">${esc(s.auff)}</textarea>
+    <label>Notizen</label><textarea name="notiz">${esc(s.notiz)}</textarea>
+    <label>Status</label><select name="status"><option value="aktiv">aktiv</option><option value="abgegangen" ${s.status==="abgegangen"?"selected":""}>abgegangen</option></select>
+    <div class="row"><div><label>Abgang am</label><input type="date" name="abgang" value="${esc(s.abgang)}"></div>
+    <div><label>Abgangsgrund</label><input name="abgangGrund" value="${esc(s.abgangGrund)}" placeholder="verkauft, verendet …"></div></div>
+    <div class="acts">${s.id?`<button type="button" class="btn del" id="del">Löschen</button>`:""}<button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div>
+  </form>`);
+  $("cx").onclick=closeSheet;
+  if(s.id)armDelete($("del"),async()=>{
+    try{for(const l of lammFor(s.id))await S.db.doc("lammungen/"+l.id).delete();await S.db.doc("schafe/"+s.id).delete();closeSheet();S.view="list";render();toast("Gelöscht")}catch(e){fail(e)}});
+  $("f").onsubmit=async e=>{
+    e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
+    for(const k in d)d[k]=String(d[k]).trim();
+    d.geaendert=new Date().toISOString();
+    try{
+      if(s.id)await S.db.doc("schafe/"+s.id).set({...d,angelegt:s.angelegt||d.geaendert});
+      else{d.angelegt=d.geaendert;const r=await S.db.collection("schafe").add(d);S.sel=r.id;S.view="detail"}
+      closeSheet();render();toast("Gespeichert")
+    }catch(err){fail(err)}
+  };
+}
+
+function lammForm(s,l){
+  l=l||{datum:new Date().toISOString().slice(0,10),laemmer:[{sex:"",status:"lebend"}],verlauf:"leicht"};
+  let lambs=(l.laemmer||[]).map(x=>({...x}));
+  const draw=()=>{
+    $("lb").innerHTML=lambs.map((y,i)=>`<div class="lambbox">
+      <div class="hd"><span>Lamm ${i+1}</span>${lambs.length>1?`<button type="button" class="btn sec sm" data-rm="${i}">Entfernen</button>`:""}</div>
+      <label>Geschlecht</label><div class="seg">
+        <button type="button" class="chip ${y.sex==="w"?"on":""}" data-sx="${i}:w">♀ weiblich</button>
+        <button type="button" class="chip ${y.sex==="m"?"on":""}" data-sx="${i}:m">♂ männlich</button></div>
+      <div class="row"><div><label>Ohrmarke</label><input data-k="${i}:nr" value="${esc(y.nr)}"></div>
+      <div><label>Geb.-Gewicht (kg)</label><input data-k="${i}:gewicht" inputmode="decimal" value="${esc(y.gewicht)}"></div></div>
+      <label>Status</label><select data-k="${i}:status">${["lebend","tot geboren","verendet","verkauft"].map(o=>`<option ${y.status===o?"selected":""}>${o}</option>`).join("")}</select>
+      <label>Bemerkung</label><input data-k="${i}:bem" value="${esc(y.bem)}">
+    </div>`).join("");
+    document.querySelectorAll("[data-sx]").forEach(b=>b.onclick=()=>{const[i,v]=b.dataset.sx.split(":");lambs[i].sex=v;draw()});
+    document.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{lambs.splice(+b.dataset.rm,1);draw()});
+    document.querySelectorAll("[data-k]").forEach(inp=>inp.oninput=inp.onchange=()=>{const[i,k]=inp.dataset.k.split(":");lambs[i][k]=inp.value});
+  };
+  openSheet(`<h3>${l.id?"Ablammung bearbeiten":"Neue Ablammung"}</h3>
+  <div style="color:var(--mute)">${esc(s.nr)} ${esc(s.name||"")}</div>
+  <form id="f">
+    <div class="row"><div><label>Datum *</label><input type="date" name="datum" required value="${esc(l.datum)}"></div>
+    <div><label>Deckbock</label><input name="bock" value="${esc(l.bock)}"></div></div>
+    <label>Geburtsverlauf</label><select name="verlauf">${["leicht","mit Hilfe","schwer","Tierarzt"].map(o=>`<option ${l.verlauf===o?"selected":""}>${o}</option>`).join("")}</select>
+    <div id="lb"></div>
+    <button type="button" class="btn sec" id="addl" style="width:100%;margin-top:10px">+ weiteres Lamm</button>
+    <label>Notiz zur Ablammung</label><textarea name="notiz">${esc(l.notiz)}</textarea>
+    <div class="acts">${l.id?`<button type="button" class="btn del" id="del">Löschen</button>`:""}<button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div>
+  </form>`);
+  draw();
+  $("addl").onclick=()=>{lambs.push({sex:"",status:"lebend"});draw()};
+  $("cx").onclick=closeSheet;
+  if(l.id)armDelete($("del"),async()=>{try{await S.db.doc("lammungen/"+l.id).delete();closeSheet();toast("Gelöscht")}catch(e){fail(e)}});
+  $("f").onsubmit=async e=>{
+    e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
+    const body={schafId:s.id,datum:d.datum,bock:String(d.bock).trim(),verlauf:d.verlauf,notiz:String(d.notiz).trim(),
+      laemmer:lambs.map(y=>({sex:y.sex||"",nr:(y.nr||"").trim(),gewicht:(y.gewicht||"").trim().replace(".",","),status:y.status||"lebend",bem:(y.bem||"").trim()})),
+      geaendert:new Date().toISOString()};
+    try{
+      if(l.id)await S.db.doc("lammungen/"+l.id).set(body);else await S.db.collection("lammungen").add(body);
+      closeSheet();toast("Gespeichert")
+    }catch(err){fail(err)}
+  };
+}
+function fail(e){
+  if(e&&e.code==="invalid_argument"&&!S.readonly){S.readonly=true;closeSheet();render();toast("Keine Schreibrechte");return}
+  if(e&&e.code==="quota_exceeded"){toast("Speicher voll – bitte alte Einträge löschen");return}
+  toast("Fehler beim Speichern – bitte nochmal versuchen")
+}
+
+/* ---------- data (offline, localStorage) ---------- */
+const KEY="herdenbuch-v1";
+const BETRIEB_START={};
+let store;
+function loadStore(){try{const o=JSON.parse(localStorage.getItem(KEY));if(o&&o.schafe&&o.lammungen){o.behandlungen=o.behandlungen||{};o.stallbuch=o.stallbuch||{};o.meta=o.meta||{};o.betrieb=o.betrieb||{...BETRIEB_START};return o}}catch(e){}return{schafe:{},lammungen:{},behandlungen:{},stallbuch:{},meta:{},betrieb:{...BETRIEB_START}}}
+function saveStore(){store.meta=store.meta||{};store.meta.geaendert=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(store))}
+function refresh(){S.schafe=Object.entries(store.schafe).map(([id,d])=>({...d,id}));S.lamm=Object.entries(store.lammungen).map(([id,d])=>({...d,id}));S.beh=Object.entries(store.behandlungen).map(([id,d])=>({...d,id}));S.tb=Object.entries(store.stallbuch).map(([id,d])=>({...d,id}));render()}
+const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const localDb={
+  doc(path){const[c,id]=path.split("/");return{
+    async set(d){store[c][id]=d;saveStore();refresh()},
+    async delete(){delete store[c][id];(store.deleted=store.deleted||{})[c+"/"+id]=new Date().toISOString();saveStore();refresh()}}},
+  collection(c){return{async add(d){const id=newId();store[c][id]=d;saveStore();refresh();return{id}}}}
+};
+async function download(name,text,type){
+  try{const f=new File([text],name,{type});if(navigator.canShare&&navigator.canShare({files:[f]})&&/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)){await navigator.share({files:[f],title:name});return}}catch(e){if(e&&e.name==="AbortError")return}
+  return download0(name,text,type)}
+function download0(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+const stamp=()=>new Date().toISOString().slice(0,16).replace("T","_").replace(":","-");
+function exportJSON(){download(`herdenbuch_${stamp()}.json`,JSON.stringify(store,null,1),"application/json");store.meta.sicherung=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(store));toast("Sicherung gespeichert");render()}
+function csvCell(v){v=String(v??"");return /[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+function exportCSV(){
+  const rows=[["Ohrmarke Mutter","Name","Rasse","Geburtsdatum","Herkunft","Züchter","Status","Ablammung Datum","Deckbock","Verlauf","Lamm Geschlecht","Lamm Ohrmarke","Gewicht kg","Lamm Status","Bemerkung"]];
+  for(const s of S.schafe){const ls=lammFor(s.id);const base=[s.nr,s.name,s.rasse,fmtD(s.geb),s.herkunft,s.zuechter,s.status];
+    if(!ls.length)rows.push(base);
+    for(const l of ls)for(const y of (l.laemmer||[{}]))rows.push([...base,fmtD(l.datum),l.bock,l.verlauf,y.sex==="m"?"männlich":y.sex==="w"?"weiblich":"",y.nr,y.gewicht,y.status,y.bem])}
+  download(`herdenbuch_laemmer_${stamp()}.csv`,"﻿"+rows.map(r=>r.map(csvCell).join(";")).join("\r\n"),"text/csv")}
+function exportBestandCSV(){
+  const akt=S.schafe.filter(x=>x.status!=="abgegangen").sort((a,b)=>String(a.nr||"").localeCompare(String(b.nr||""),"de",{numeric:true}));
+  const rows=[["Ohrmarke","Name","Rasse","Geburtsdatum","Alter","Herkunft","Züchter","Zugang am","Vater","Mutter","Auffälligkeiten","Notizen","Ablammungen","Lämmer gesamt","Letzte Ablammung","Letzte Behandlung","Medikament"]];
+  for(const x of akt){const l=lammFor(x.id),b=behFor(x.id)[0];
+    rows.push([x.nr,x.name,x.rasse,fmtD(x.geb),alter(x.geb),x.herkunft,x.zuechter,fmtD(x.zugang),x.vater,x.mutter,x.auff,x.notiz,l.length,l.reduce((n,y)=>n+(y.laemmer||[]).length,0),l[0]?fmtD(l[0].datum):"",b?fmtD(b.datum):"",b?b.medikament:""].map(v=>v==="–"?"":v))}
+  download(`mutterschaf_bestand_${stamp()}.csv`,"\ufeff"+rows.map(r=>r.map(csvCell).join(";")).join("\r\n"),"text/csv");toast(`${akt.length} Mutterschafe exportiert`)}
+function exportBehCSV(){
+  const rows=[["Datum","Medikament","Grund","Dosis","Wartezeit bis","Behandelt von","Charge/Beleg","Alle Tiere","Ohrmarke","Name","Notiz"]];
+  for(const b of S.beh.slice().sort((a,c)=>(c.datum||"").localeCompare(a.datum||"")))for(const id of b.schafIds||[]){const s=S.schafe.find(x=>x.id===id)||{};
+    rows.push([fmtD(b.datum),b.medikament,b.grund,b.dosis,fmtD(b.wartezeit),b.von,b.charge,b.alle?"ja":"nein",s.nr||"(gelöscht)",s.name,b.notiz])}
+  download(`herdenbuch_behandlungen_${stamp()}.csv`,"\ufeff"+rows.map(r=>r.map(csvCell).join(";")).join("\r\n"),"text/csv")}
+function importJSON(file){
+  const fr=new FileReader();fr.onload=()=>{try{
+    const inc=JSON.parse(fr.result);if(!inc.schafe||!inc.lammungen)throw 0;
+    const del={...(store.deleted||{}),...(inc.deleted||{})};let n=0;
+    for(const c of ["schafe","lammungen","behandlungen","stallbuch"])for(const[id,d]of Object.entries(inc[c]||{})){
+      const cur=store[c][id];if(del[c+"/"+id])continue;
+      if(!cur||(d.geaendert||"")>(cur.geaendert||"")){store[c][id]=d;n++}}
+    for(const k of Object.keys(del)){const[c,id]=k.split("/");if(store[c])delete store[c][id]}
+    if(inc.betrieb&&(inc.betrieb.geaendert||"")>((store.betrieb||{}).geaendert||"")){store.betrieb=inc.betrieb;n++}
+    store.deleted=del;saveStore();refresh();closeSheet();toast(`Eingelesen: ${n} neue/geänderte Einträge`)
+  }catch(e){toast("Datei konnte nicht gelesen werden")}};fr.readAsText(file)}
+function dataMenu(){
+  const last=store.meta&&store.meta.sicherung;
+  openSheet(`<h3>Daten sichern & abgleichen</h3>
+  <div class="note">Die Daten liegen nur auf diesem Gerät, in diesem Browser. Sichere regelmäßig – und zum Abgleich zwischen PC und Handy: auf einem Gerät „Sichern“, die Datei aufs andere Gerät bringen und dort „Einlesen“. Neuere Einträge gewinnen, nichts wird doppelt.</div>
+  <div style="color:var(--mute);font-size:14px;margin-bottom:12px">Letzte Sicherung: ${last?new Date(last).toLocaleString("de-DE"):"noch nie"}</div>
+  <button class="btn" style="width:100%" id="ex">💾 Sichern (Datei speichern)</button>
+  <label class="btn sec" style="display:block;text-align:center;margin-top:10px;color:var(--ink);font-size:16px">📥 Sicherung einlesen<input type="file" accept=".json,application/json" id="im" style="display:none"></label>
+  <button class="btn sec" style="width:100%;margin-top:10px" id="csvs">🐑 Aktueller Mutterschaf-Bestand (CSV)</button>
+  <button class="btn sec" style="width:100%;margin-top:10px" id="csv">📊 Schafe & Lämmer als Excel-Tabelle (CSV)</button>
+  <button class="btn sec" style="width:100%;margin-top:10px" id="csvb">💊 Behandlungen als Excel-Tabelle (CSV)</button>
+  <div class="acts"><button class="btn sec" id="cx">Schließen</button></div>`);
+  $("ex").onclick=exportJSON;$("csv").onclick=exportCSV;$("csvb").onclick=exportBehCSV;$("csvs").onclick=exportBestandCSV;$("cx").onclick=closeSheet;
+  $("im").onchange=e=>{if(e.target.files[0])importJSON(e.target.files[0])};
+}
+try{localStorage.setItem("__t","1");localStorage.removeItem("__t");S.db=localDb}catch(e){S.err="Dieser Browser erlaubt hier kein Speichern. Bitte die Datei in Chrome, Edge, Firefox oder Safari öffnen."}
+store=loadStore();S.loaded={s:true,l:true};
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+refresh();
+</script>
+<script>if("serviceWorker" in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});</script>
+</body>
+</html>
