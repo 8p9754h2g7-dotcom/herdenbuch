@@ -74,7 +74,7 @@ h2{font-size:17px;margin:18px 0 8px;display:flex;align-items:center;justify-cont
 .seg{display:flex;gap:6px}.seg .chip{flex:1;text-align:center}
 .note{background:var(--chip);border-radius:10px;padding:10px 12px;font-size:14px;color:var(--mute);margin-bottom:10px}
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:7;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
-.tabbar button{flex:1;border:0;background:none;font:inherit;font-size:11px;color:var(--mute);padding:8px 0 9px;cursor:pointer}
+.tabbar button{flex:1;min-width:0;border:0;background:none;font:inherit;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--mute);padding:8px 0 9px;cursor:pointer}
 .tabbar button b{display:block;font-size:20px;line-height:1.2}
 .tabbar button.on{color:var(--acc);font-weight:600}
 .fab{bottom:calc(76px + env(safe-area-inset-bottom))!important}
@@ -101,6 +101,9 @@ details.card summary::after{content:"▾";color:var(--mute)}details[open].card s
 #lock{position:fixed;inset:0;z-index:100;background:linear-gradient(160deg,#4d8a37 0%,#2f6224 60%,#1f4318 100%);display:flex;align-items:center;justify-content:center;padding:24px;padding-top:max(24px,env(safe-area-inset-top))}
 .lockbox{background:var(--bg);border-radius:22px;padding:26px 22px;width:100%;max-width:360px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.35)}
 .lockbox input{margin-top:10px;text-align:center;font-size:18px}
+.cksec{font-size:12px;font-weight:700;color:var(--mute);padding:10px 4px 4px;text-transform:uppercase;letter-spacing:.5px}
+.ckleer{color:var(--mute);font-size:13px;padding:6px 4px 10px}
+header h1{flex-wrap:wrap}
 /* ===== Design: Grünland ===== */
 :root{
   --bg:#eef3e6;--card:#ffffff;--ink:#1f2d1a;--mute:#5f6f55;--line:#d5e0c8;
@@ -158,7 +161,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--acc);outline-off
 
 <script>
 const RASSEN=["Weißes Bergschaf","Coburger Fuchs","Kreuzung","Sonstige"];
-const S={fin:[],tab:"list",beh:[],tb:[],db:null,schafe:[],lamm:[],loaded:{s:false,l:false},err:null,view:"list",sel:null,q:"",filter:"alle",readonly:false};
+const S={kunden:[],med:[],fin:[],tab:"home",beh:[],tb:[],db:null,schafe:[],lamm:[],loaded:{s:false,l:false},err:null,view:"list",sel:null,q:"",filter:"alle",readonly:false};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmtD=d=>{if(!d)return"–";const [y,m,t]=d.split("-");return t?`${t}.${m}.${y}`:d};
@@ -172,6 +175,9 @@ function render(){
   const app=$("app");
   if(S.view==="detail"&&S.sel){app.innerHTML=detailHTML();return}
   if(S.view==="betrieb"){app.innerHTML=betriebHTML();bindBetrieb();return}
+  if(S.view==="med"){app.innerHTML=medHTML();bindMed();return}
+  if(S.view==="kunden"){app.innerHTML=kundenHTML();bindKunden();return}
+  if(S.tab==="home"){app.innerHTML=homeHTML()+tabbar();bindHome();bindTabs();return}
   if(S.tab==="beh"){app.innerHTML=behHTML()+tabbar();bindBeh();bindTabs();return}
   if(S.tab==="lm"){app.innerHTML=lmHTML()+tabbar();bindLm();bindTabs();return}
   if(S.tab==="fin"){app.innerHTML=finHTML()+tabbar();bindFin();bindTabs();return}
@@ -284,12 +290,15 @@ function vor(d){if(!d)return"";const n=Math.round((new Date(today())-new Date(d)
 const behFor=id=>S.beh.filter(b=>(b.schafIds||[]).includes(id)).sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
 const wzBadge=b=>b.wartezeit&&b.wartezeit>=today()?`<span class="wz">Wartezeit bis ${fmtD(b.wartezeit)}</span>`:"";
 const schafName=id=>{const s=S.schafe.find(x=>x.id===id);return s?(s.nr+(s.name?" "+s.name:"")):"(gelöscht)"};
-function tierText(b){const n=(b.schafIds||[]).length;return b.alle?`alle Mutterschafe (${n})`:n<=3?(b.schafIds||[]).map(schafName).map(esc).join(", "):`${n} Mutterschafe`}
+function tierText(b){const n=(b.schafIds||[]).length,m=(b.lammIds||[]).length,p=[];
+  if(n)p.push(b.alle?`alle Mutterschafe (${n})`:n<=3?(b.schafIds||[]).map(schafName).map(esc).join(", "):`${n} Mutterschafe`);
+  if(m)p.push(b.alleL?`alle Lämmer (${m})`:m<=3?"Lamm "+(b.lammIds||[]).map(id=>{const y=lammById(id);return y?esc(y.nr||"o. Ohrmarke"):"?"}).join(", "):`${m} Lämmer`);
+  return p.join(" + ")||"–"}
 function behCard(b){return `<div class="card" ${S.db?`data-b="${esc(b.id)}" style="cursor:pointer"`:""}>
   <div style="display:flex;justify-content:space-between;gap:8px;font-weight:600"><span>${esc(b.medikament)}</span><span>${fmtD(b.datum)}</span></div>
   <div style="color:var(--mute);font-size:14px">${tierText(b)}${b.grund?" · "+esc(b.grund):""}${b.dosis?" · "+esc(b.dosis):""}${b.von?" · "+esc(b.von):""}</div>
   ${wzBadge(b)}${b.notiz?`<div style="color:var(--mute);font-size:14px;margin-top:4px;white-space:pre-wrap">${esc(b.notiz)}</div>`:""}</div>`}
-function tabbar(){return `<nav class="tabbar">${[["list","🐑","Schafe"],["lm","🐣","Lämmer"],["beh","💊","Behandlung"],["tb","🧹","Stallbuch"],["fin","💶","Finanzen"]].map(([k,i,t])=>`<button data-tab="${k}" class="${(S.tab||"list")===k?"on":""}"><b>${i}</b>${t}</button>`).join("")}</nav>`}
+function tabbar(){return `<nav class="tabbar">${[["home","🏠","Übersicht"],["list","🐑","Schafe"],["lm","🐣","Lämmer"],["beh","💊","Behandl."],["tb","🧹","Stall"],["fin","💶","Finanzen"]].map(([k,i,t])=>`<button data-tab="${k}" class="${(S.tab||"home")===k?"on":""}"><b>${i}</b>${t}</button>`).join("")}</nav>`}
 function bindTabs(){document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;S.view="list";render();scrollTo(0,0)});const dm=$("dm");if(dm)dm.onclick=dataMenu}
 function behHTML(){
   const alle=S.beh.slice().sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
@@ -297,13 +306,14 @@ function behHTML(){
   const jahr=S.byear==="alle"||jahre.includes(S.byear)?S.byear:cur;
   const all=jahr==="alle"?alle:alle.filter(e=>(e.datum||"").startsWith(jahr));
   const last={};for(const b of all){const k=(b.medikament||"").trim().toLowerCase();if(k&&!last[k])last[k]=b}
-  return `<header><h1>💊 Behandlungen <small>${all.length} Einträge${jahr==="alle"?"":" "+jahr}</small><button class="btn sec sm" id="dm">💾</button></h1></header><main>
-  <div class="yearbar"><span>📅 Jahr</span><select id="byr"><option value="alle" ${jahr==="alle"?"selected":""}>Alle Jahre</option>${jahre.map(y=>`<option ${y===jahr?"selected":""}>${y}</option>`).join("")}</select></div>
+  return `<header><h1>💊 Behandlungen <small></small><button class="btn sec sm" id="dm">💾</button></h1></header><main>
+  <button class="btn sec" id="medl" style="width:100%;margin-bottom:12px">📋 Medikamentenliste & Wartezeiten</button>
+  <div class="yearbar"><span>📅 Jahr · ${all.length} Einträge</span><select id="byr"><option value="alle" ${jahr==="alle"?"selected":""}>Alle Jahre</option>${jahre.map(y=>`<option ${y===jahr?"selected":""}>${y}</option>`).join("")}</select></div>
   ${Object.keys(last).length?`<h2>Zuletzt je Medikament</h2><div class="card">${Object.values(last).map(b=>`<div class="lamb" data-b="${esc(b.id)}" style="cursor:pointer"><b>${esc(b.medikament)}</b> – ${fmtD(b.datum)} <span style="color:var(--mute)">(${vor(b.datum)})</span><div style="color:var(--mute);font-size:13px">${tierText(b)}</div>${wzBadge(b)}</div>`).join("")}</div>`:""}
   <h2>${jahr==="alle"?"Alle Behandlungen":"Behandlungen "+jahr}</h2>
   ${all.length?all.map(behCard).join(""):`<div class="empty">Noch keine Behandlung erfasst.<br>Tippe auf „+ Behandlung“.</div>`}
   </main>${S.db?`<button class="fab" id="addb">+ Behandlung</button>`:""}`}
-function bindBeh(){const by=$("byr");if(by)by.onchange=()=>{S.byear=by.value;render()};const a=$("addb");if(a)a.onclick=()=>behForm();document.querySelectorAll("[data-b]").forEach(x=>x.onclick=()=>behForm(S.beh.find(y=>y.id===x.dataset.b)))}
+function bindBeh(){const ml=$("medl");if(ml)ml.onclick=()=>{S.view="med";render();scrollTo(0,0)};const by=$("byr");if(by)by.onchange=()=>{S.byear=by.value;render()};const a=$("addb");if(a)a.onclick=()=>behForm();document.querySelectorAll("[data-b]").forEach(x=>x.onclick=()=>behForm(S.beh.find(y=>y.id===x.dataset.b)))}
 const TB_VORSCHLAG=["Stall ausmisten","Einstreuen","Klauenpflege","Schur","Zaun kontrolliert","Tränken gereinigt","Futter gekauft","Weidewechsel","Tierarzt-Besuch"];
 function tbHTML(){
   const alle=S.tb.slice().sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
@@ -334,43 +344,6 @@ function tbForm(e){
   $("f").onsubmit=async ev=>{ev.preventDefault();const d=Object.fromEntries(new FormData(ev.target));for(const k in d)d[k]=String(d[k]).trim();d.geaendert=new Date().toISOString();
     try{if(e.id)await S.db.doc("stallbuch/"+e.id).set(d);else await S.db.collection("stallbuch").add(d);closeSheet();toast("Gespeichert")}catch(x){fail(x)}};
 }
-function behForm(b,pre){
-  const aktive=S.schafe.filter(s=>s.status!=="abgegangen").sort((a,c)=>String(a.nr||"").localeCompare(String(c.nr||""),"de",{numeric:true}));
-  b=b||{datum:today(),alle:false,schafIds:pre?[pre]:[]};
-  const sel=new Set(b.schafIds||[]);let alle=!!b.alle,q="";
-  const meds=[...new Set(S.beh.map(x=>x.medikament).filter(Boolean))];
-  openSheet(`<h3>${b.id?"Behandlung bearbeiten":"Neue Behandlung"}</h3><form id="f">
-    <div class="row"><div><label>Datum *</label><input type="date" name="datum" required value="${esc(b.datum)}"></div>
-    <div><label>Wartezeit bis</label><input type="date" name="wartezeit" value="${esc(b.wartezeit)}"></div></div>
-    <label>Medikament *</label><input name="medikament" required list="ml" value="${esc(b.medikament)}" placeholder="z. B. Entwurmungsmittel"><datalist id="ml">${meds.map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
-    <div class="row"><div><label>Grund / Diagnose</label><input name="grund" value="${esc(b.grund)}" placeholder="z. B. Entwurmung"></div>
-    <div><label>Dosis / Menge</label><input name="dosis" value="${esc(b.dosis)}" placeholder="z. B. 5 ml oral"></div></div>
-    <div class="row"><div><label>Behandelt von</label><input name="von" value="${esc(b.von)}" placeholder="selbst / Tierarzt"></div>
-    <div><label>Charge / Beleg-Nr.</label><input name="charge" value="${esc(b.charge)}"></div></div>
-    <label>Welche Tiere?</label>
-    <div class="seg"><button type="button" class="chip" id="mAll">Alle aktiven (${aktive.length})</button><button type="button" class="chip" id="mEin">Einzelne auswählen</button></div>
-    <div id="tl"></div>
-    <label>Notiz</label><textarea name="notiz">${esc(b.notiz)}</textarea>
-    <div class="acts">${b.id?`<button type="button" class="btn del" id="del">Löschen</button>`:""}<button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div></form>`);
-  const drawT=()=>{
-    $("mAll").classList.toggle("on",alle);$("mEin").classList.toggle("on",!alle);
-    if(alle){$("tl").innerHTML=`<div class="note" style="margin-top:8px">Wird bei allen ${aktive.length} aktiven Mutterschafen eingetragen.</div>`;return}
-    const extra=[...sel].filter(id=>!aktive.some(a=>a.id===id)).map(id=>S.schafe.find(x=>x.id===id)).filter(Boolean);
-    const list=[...aktive,...extra].filter(s=>!q||[s.nr,s.name].join(" ").toLowerCase().includes(q));
-    $("tl").innerHTML=`<div class="row" style="margin-top:8px;align-items:center"><input id="tq" type="search" placeholder="Tier suchen …" value="${esc(q)}"><div style="flex:none;color:var(--mute);font-size:14px">${sel.size} gewählt</div></div>
-      <div class="chklist">${list.map(s=>`<label class="ck"><input type="checkbox" data-s="${esc(s.id)}" ${sel.has(s.id)?"checked":""}><span><b>${esc(s.nr)}</b> ${esc(s.name||"")} <span style="color:var(--mute);font-size:13px">${esc(s.rasse||"")}</span></span></label>`).join("")||`<div class="empty" style="padding:16px">Keine Tiere gefunden.</div>`}</div>`;
-    const tq=$("tq");tq.oninput=()=>{q=tq.value.toLowerCase();const p=tq.selectionStart;drawT();const n=$("tq");n.focus();n.setSelectionRange(p,p)};
-    document.querySelectorAll("[data-s]").forEach(c=>c.onchange=()=>{c.checked?sel.add(c.dataset.s):sel.delete(c.dataset.s);drawT()});
-  };
-  $("mAll").onclick=()=>{alle=true;drawT()};$("mEin").onclick=()=>{alle=false;drawT()};drawT();
-  $("cx").onclick=closeSheet;
-  if(b.id)armDelete($("del"),async()=>{try{await S.db.doc("behandlungen/"+b.id).delete();closeSheet();toast("Gelöscht")}catch(x){fail(x)}});
-  $("f").onsubmit=async ev=>{ev.preventDefault();const d=Object.fromEntries(new FormData(ev.target));for(const k in d)d[k]=String(d[k]).trim();
-    d.alle=alle;d.schafIds=alle?aktive.map(s=>s.id):[...sel];
-    if(!d.schafIds.length){toast("Bitte mindestens ein Tier auswählen");return}
-    d.geaendert=new Date().toISOString();
-    try{if(b.id)await S.db.doc("behandlungen/"+b.id).set(d);else await S.db.collection("behandlungen").add(d);closeSheet();toast("Gespeichert")}catch(x){fail(x)}};
-}
 
 function lammAlter(d){if(!d)return"–";const t=Math.round((new Date(today())-new Date(d))/864e5);if(t<0)return"–";if(t<28)return t===1?"1 Tag":`${t} Tage`;if(t<91)return`${Math.floor(t/7)} Wochen`;const a=alter(d);return a}
 const LSTAT={lebend:["Lebend","#3f7a2e"],verkauft:["Verkauft","#b8862f"],tot:["Verendet / tot geb.","#b23b2b"]};
@@ -400,7 +373,7 @@ function lmHTML(){
     <div class="info"><div class="name">${badge(y.status)}${y.nr?esc(y.nr):"ohne Ohrmarke"} <span style="font-weight:400;color:var(--mute)">· ${y.sex==="m"?"männlich":y.sex==="w"?"weiblich":"Geschlecht offen"}</span></div>
     <div class="sub">${y.status==="lebend"?`<b style="color:var(--ink)">${lammAlter(y.datum)}</b> · `:""}geb. ${fmtD(y.datum)}${y.gewicht?" · "+esc(y.gewicht)+" kg":""}</div>
     <div class="sub">Mutter: ${y.mutter?esc(y.mutter.nr+(y.mutter.name?" "+y.mutter.name:"")):"(gelöscht)"}${y.bock?" · Vater: "+esc(y.bock):""}</div>
-    ${y.bem?`<div class="med">${esc(y.bem)}</div>`:""}${em[y.id]?`<div class="med" style="color:var(--acc);font-weight:600">💶 Erlös ${eur(em[y.id].sum)} (${fmtD(em[y.id].fins[0].datum)})</div>`:""}</div></div>`).join(""):`<div class="empty">${grp.length?"Keine Treffer.":leer}</div>`}
+    ${y.bem?`<div class="med">${esc(y.bem)}</div>`:""}${(()=>{const bh=lammBehFor(y.id)[0];return bh?`<div class="med">💊 ${fmtD(bh.datum)} · ${esc(bh.medikament)} ${wzBadge(bh)}</div>`:""})()}${em[y.id]?`<div class="med" style="color:var(--acc);font-weight:600">💶 Erlös ${eur(em[y.id].sum)} (${fmtD(em[y.id].fins[0].datum)})</div>`:""}</div></div>`).join(""):`<div class="empty">${grp.length?"Keine Treffer.":leer}</div>`}
   ${S.lms==="lebend"?`<div class="note">Tipp: Antippen öffnet die Ablammung – dort kannst du den Status z. B. auf „verkauft“ ändern, dann wandert das Lamm in den Reiter „Verkauft“.</div>`:""}
   </main>`}
 function bindLm(){const ly=$("lyr");if(ly)ly.onchange=()=>{S.lyear=ly.value;render()};
@@ -465,7 +438,7 @@ function finHTML(){
   let list=yl.filter(f=>S.ff==="alle"||f.art===S.ff);
   if(q)list=list.filter(f=>[f.text,f.partner,f.kategorie,f.notiz].join(" ").toLowerCase().includes(q));
   list.sort((a,b)=>(b.datum||"").localeCompare(a.datum||"")||(Number(b.nr)||0)-(Number(a.nr)||0));
-  return `<header><h1>💶 Finanzen <small></small><button class="btn sec sm" id="dm">💾</button></h1>
+  return `<header><h1>💶 Finanzen <small></small><button class="btn sec sm" id="kdl">👥 Kunden</button><button class="btn sec sm" id="dm">💾</button></h1>
     <input id="fq" type="search" placeholder="Suche: Text, Begünstigter, Kategorie …" value="${esc(S.fq||"")}">
     <div class="chips">${[["alle","Alle"],["ein","Einnahmen"],["aus","Ausgaben"]].map(([k,t])=>`<button class="chip ${S.ff===k?"on":""}" data-ff="${k}">${t}</button>`).join("")}</div></header><main>
   <div class="yearbar"><span>📅 Jahresübersicht</span><select id="fyr">${jahre.map(y=>`<option ${y===jahr?"selected":""}>${y}</option>`).join("")}</select></div>
@@ -485,7 +458,7 @@ function finHTML(){
     <div class="info"><div class="name">${esc(f.text)}</div><div class="sub">${fmtD(f.datum)}${f.partner?" · "+esc(f.partner):""}</div><div class="med">${esc(f.kategorie||"")}${f.schafId?` · 🐑 verknüpft`:""}${(f.lammIds||[]).length?` · 🐣 ${f.lammIds.map(id=>{const y=lammById(id);return y?esc(y.nr||"o. Ohrmarke"):"?"}).join(", ")}`:""}</div></div>
     <div class="finbetrag" style="color:${f.art==="ein"?"var(--acc)":"var(--danger)"}">${f.art==="ein"?"+":"−"} ${eur(f.betrag)}</div></div>`).join(""):`<div class="empty">${yl.length?"Keine Treffer.":`Noch keine Buchungen für ${jahr}.<br>Tippe auf „+ Buchung“ oder importiere deine Excel-Liste.`}</div>`}
   </main>${S.db?`<button class="fab" id="addf">+ Buchung</button>`:""}`}
-function bindFin(){
+function bindFin(){const kd=$("kdl");if(kd)kd.onclick=()=>{S.view="kunden";render();scrollTo(0,0)};
   const a=$("addf");if(a)a.onclick=()=>finForm();
   document.querySelectorAll("[data-fin]").forEach(x=>x.onclick=()=>finForm(S.fin.find(y=>y.id===x.dataset.fin)));
   document.querySelectorAll(".ftab [data-id]").forEach(r=>r.onclick=()=>{S.sel=r.dataset.id;S.view="detail";render();scrollTo(0,0)});
@@ -506,7 +479,10 @@ function finForm(f){
     <div><label>Betrag (€) *</label><input name="betrag" required inputmode="decimal" placeholder="0,00" value="${f.betrag!=null?String(f.betrag).replace(".",","):""}"></div></div>
     <label>Beschreibung *</label><input name="text" required list="ftl" value="${esc(f.text)}" placeholder="z. B. 2x Sojaschrot 25 kg"><datalist id="ftl">${texte.map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
     <label>Kategorie</label><select name="kategorie" id="fkat">${katOpts()}</select>
-    <label id="plab">${art==="ein"?"Käufer / Zahler":"Begünstigter"}</label><input name="partner" list="fpl" value="${esc(f.partner)}"><datalist id="fpl">${partners.map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
+    <label id="plab">${art==="ein"?"Käufer / Zahler":"Begünstigter"}</label>
+    <div id="kdbox"></div>
+    <input name="partner" list="fpl" value="${esc(f.partner)}">
+    <div id="kdnew"></div><datalist id="fpl">${partners.map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
     <div id="lmpick"></div>
     <label>Notiz</label><textarea name="notiz">${esc(f.notiz)}</textarea>
     <div class="acts">${neu?"":`<button type="button" class="btn del" id="del">Löschen</button>`}<button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div></form>`);
@@ -517,12 +493,21 @@ function finForm(f){
     const list=cand.filter(y=>!lq||[y.nr,y.mutter&&y.mutter.nr].join(" ").toLowerCase().includes(lq)).sort((a,b)=>(lsel.has(b.id)-lsel.has(a.id))||(b.datum||"").localeCompare(a.datum||""));
     box.innerHTML=`<label>🐣 Verkaufte Lämmer zuordnen (Ohrmarke) – optional</label>
       <div class="row" style="align-items:center"><input id="lpq" type="search" placeholder="Ohrmarke suchen …" value="${esc(lq)}"><div style="flex:none;color:var(--mute);font-size:14px">${lsel.size} gewählt</div></div>
-      <div class="chklist">${list.map(y=>`<label class="ck"><input type="checkbox" data-lp="${esc(y.id)}" ${lsel.has(y.id)?"checked":""}><span>${lammLabel(y)}${y.status!=="lebend"?` <span style="color:var(--mute);font-size:12px">(${esc(y.status)})</span>`:""}</span></label>`).join("")||`<div style="color:var(--mute);padding:12px 4px;font-size:14px">Keine passenden Lämmer.</div>`}</div>
+      <div class="chklist">${list.map(y=>`<label class="ck"><input type="checkbox" data-lp="${esc(y.id)}" ${lsel.has(y.id)?"checked":""}><span>${lammLabel(y)}${(()=>{const w=lammWz(y.id);return w?` <span class="wz">⚠ Wartezeit bis ${fmtD(w.wartezeit)}</span>`:""})()}${y.status!=="lebend"?` <span style="color:var(--mute);font-size:12px">(${esc(y.status)})</span>`:""}</span></label>`).join("")||`<div style="color:var(--mute);padding:12px 4px;font-size:14px">Keine passenden Lämmer.</div>`}</div>
       ${lsel.size?`<label class="ck" style="border:0"><input type="checkbox" id="lvk" ${setVk?"checked":""}><span>Status dieser Lämmer auf „verkauft“ setzen</span></label>`:""}`;
     const q=$("lpq");q.oninput=()=>{lq=q.value.toLowerCase();const p=q.selectionStart;drawPick();const n=$("lpq");n.focus();n.setSelectionRange(p,p)};
     document.querySelectorAll("[data-lp]").forEach(c=>c.onchange=()=>{c.checked?lsel.add(c.dataset.lp):lsel.delete(c.dataset.lp);drawPick()});
     const v=$("lvk");if(v)v.onchange=()=>{setVk=v.checked}};
-  const setArt=v=>{drawPick&&setTimeout(drawPick);art=v;$("aE").classList.toggle("on",v==="ein");$("aA").classList.toggle("on",v==="aus");$("fkat").innerHTML=katOpts();$("plab").textContent=v==="ein"?"Käufer / Zahler":"Begünstigter";if(neu)autoKat()};
+  let kundeId=f.kundeId||"";
+  const drawKd=()=>{const box=$("kdbox"),nb=$("kdnew");if(art!=="ein"){box.innerHTML="";nb.innerHTML="";return}
+    const ks=S.kunden.slice().sort((a,c)=>(a.name||"").localeCompare(c.name||"","de"));
+    box.innerHTML=ks.length?`<select id="kdsel" style="margin-bottom:8px"><option value="">👥 Kunde aus Liste wählen …</option>${ks.map(k=>`<option value="${esc(k.id)}" ${k.id===kundeId?"selected":""}>${esc(k.name)}${k.ort?" ("+esc(k.ort)+")":""}</option>`).join("")}</select>`:"";
+    const pv=document.querySelector("[name=partner]").value.trim().toLowerCase();
+    nb.innerHTML=pv&&!S.kunden.some(k=>(k.name||"").trim().toLowerCase()===pv)?`<label class="ck" style="border:0;padding:6px 0"><input type="checkbox" id="kdadd" checked><span>„${esc(document.querySelector("[name=partner]").value.trim())}“ in die Kundenliste aufnehmen</span></label>`:"";
+    const ks2=$("kdsel");if(ks2)ks2.onchange=()=>{kundeId=ks2.value;const k=S.kunden.find(x=>x.id===kundeId);if(k){document.querySelector("[name=partner]").value=k.name}drawKd()}};
+  document.querySelector("[name=partner]").addEventListener("input",()=>{const pv=document.querySelector("[name=partner]").value.trim().toLowerCase();const k=S.kunden.find(x=>(x.name||"").trim().toLowerCase()===pv);kundeId=k?k.id:"";const sl=$("kdsel");if(sl)sl.value=kundeId;
+    const nb=$("kdnew");if(nb&&art==="ein"){const had=!!$("kdadd");if(!!(pv&&!k)!==had)drawKd()}});
+  const setArt=v=>{drawPick&&setTimeout(drawPick);setTimeout(drawKd);art=v;$("aE").classList.toggle("on",v==="ein");$("aA").classList.toggle("on",v==="aus");$("fkat").innerHTML=katOpts();$("plab").textContent=v==="ein"?"Käufer / Zahler":"Begünstigter";if(neu)autoKat()};
   let katTouched=!neu;$("fkat").onchange=()=>{katTouched=true};
   const autoKat=()=>{if(katTouched)return;const t=document.querySelector("[name=text]").value,p=document.querySelector("[name=partner]").value;if(t)$("fkat").value=guessKat(t,p,art==="ein")};
   document.querySelector("[name=text]").addEventListener("input",autoKat);document.querySelector("[name=partner]").addEventListener("input",autoKat);
@@ -533,7 +518,8 @@ function finForm(f){
     closeSheet();toast("Gelöscht")}catch(x){fail(x)}});
   $("f").onsubmit=async ev=>{ev.preventDefault();const d=Object.fromEntries(new FormData(ev.target));for(const k in d)d[k]=String(d[k]).trim();
     const b=parseBetrag(d.betrag);if(b===null){toast("Bitte gültigen Betrag eingeben");return}
-    const body={...d,art,lammIds:art==="ein"?[...lsel]:[],betrag:b,nr:f.nr&&(f.datum||"").slice(0,4)===d.datum.slice(0,4)?f.nr:nextNr(d.datum.slice(0,4)),geaendert:new Date().toISOString()};
+    if(art==="ein"&&d.partner&&!kundeId&&$("kdadd")&&$("kdadd").checked){try{const r=await S.db.collection("kunden").add({name:d.partner,geaendert:new Date().toISOString()});kundeId=r.id}catch(x){}}
+    const body={...d,art,kundeId:art==="ein"?kundeId:"",lammIds:art==="ein"?[...lsel]:[],betrag:b,nr:f.nr&&(f.datum||"").slice(0,4)===d.datum.slice(0,4)?f.nr:nextNr(d.datum.slice(0,4)),geaendert:new Date().toISOString()};
     if(f.schafId)body.schafId=f.schafId;
     try{if(neu)await S.db.collection("finanzen").add(body);else await S.db.doc("finanzen/"+f.id).set(body);
       if(f.schafId){const sf=S.schafe.find(x=>x.id===f.schafId);if(sf&&Number(sf.kaufpreis)!==b){const{id:_,...rest}=sf;await S.db.doc("schafe/"+sf.id).set({...rest,kaufpreis:b,geaendert:new Date().toISOString()})}}
@@ -573,7 +559,170 @@ function exportFinCSV(){const jahr=finJahr();
   for(const f of yl)rows.push([f.nr,fmtD(f.datum),f.text,f.kategorie,f.art==="ein"?num(f.betrag):"",f.art==="aus"?num(f.betrag):"",f.partner,(f.lammIds||[]).map(id=>{const y=lammById(id);return y?(y.nr||"ohne Ohrmarke"):""}).join(", "),f.notiz]);
   download(`finanzen_${jahr}_${stamp()}.csv`,"﻿"+rows.map(r=>r.map(csvCell).join(";")).join("\r\n"),"text/csv")}
 
+/* ---------- Hilfen ---------- */
+function addDays(d,n){const x=new Date(d+"T12:00:00");x.setDate(x.getDate()+Number(n));return x.toISOString().slice(0,10)}
+const findMed=name=>{const k=String(name||"").trim().toLowerCase();return k?S.med.find(m=>(m.name||"").trim().toLowerCase()===k):null};
+const lammBehFor=id=>S.beh.filter(b=>(b.lammIds||[]).includes(id)).sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
+const lammWz=id=>lammBehFor(id).find(b=>b.wartezeit&&b.wartezeit>=today());
+const schafWz=id=>behFor(id).find(b=>b.wartezeit&&b.wartezeit>=today());
+function kundeStats(k){const n=(k.name||"").trim().toLowerCase();const fs=S.fin.filter(f=>f.art==="ein"&&(f.kundeId===k.id||(!f.kundeId&&(f.partner||"").trim().toLowerCase()===n)));
+  return{sum:fs.reduce((a,f)=>a+(Number(f.betrag)||0),0),n:fs.length,last:fs.map(f=>f.datum).sort().pop(),lamm:fs.reduce((a,f)=>a+(f.lammIds||[]).length,0)}}
+function subHead(title,back,extra){return `<header><button class="back" id="bk">‹ ${back}</button><h1 style="margin:8px 0 0">${title}${extra||""}</h1></header>`}
+
+/* ---------- Übersicht / Dashboard ---------- */
+function homeHTML(){
+  const cur=new Date().getFullYear()+"";
+  const jahre=[...new Set([cur,...S.lamm.map(l=>(l.datum||"").slice(0,4)).filter(y=>/^\d{4}$/.test(y))])].sort().reverse();
+  const jahr=jahre.includes(S.hyear)?S.hyear:cur;
+  const akt=S.schafe.filter(s=>s.status!=="abgegangen").sort((a,b)=>String(a.nr||"").localeCompare(String(b.nr||""),"de",{numeric:true}));
+  const lj=S.lamm.filter(l=>(l.datum||"").startsWith(jahr));
+  const gelammt=new Set(lj.map(l=>l.schafId));
+  const offen=akt.filter(s=>!gelammt.has(s.id)),fertig=akt.length-offen.length,pct=akt.length?Math.round(fertig/akt.length*100):0;
+  const lam=lj.flatMap(l=>l.laemmer||[]),st=g=>lam.filter(y=>statGrp(y.status||"lebend")===g).length;
+  const wz=S.beh.filter(b=>b.wartezeit&&b.wartezeit>=today()).sort((a,b)=>a.wartezeit.localeCompare(b.wartezeit));
+  const fy=S.fin.filter(f=>(f.datum||"").startsWith(jahr)),ein=fy.filter(f=>f.art==="ein").reduce((a,f)=>a+f.betrag,0),aus=fy.filter(f=>f.art==="aus").reduce((a,f)=>a+f.betrag,0);
+  const tbl={};for(const e of S.tb.slice().sort((a,b)=>(b.datum||"").localeCompare(a.datum||""))){const k=(e.taetigkeit||"").trim().toLowerCase();if(k&&!tbl[k])tbl[k]=e}
+  const b=(store&&store.betrieb)||{};
+  return `<header><h1>🏠 Übersicht <small>${b.inhaber?esc(b.inhaber):""}</small><button class="btn sec sm" id="bt">🏡</button><button class="btn sec sm" id="dm">💾</button></h1></header><main>
+  <div class="yearbar"><span>📅 Ablammsaison</span><select id="hyr">${jahre.map(y=>`<option ${y===jahr?"selected":""}>${y}</option>`).join("")}</select></div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:17px">${fertig} von ${akt.length} gelammt</b><span style="color:var(--mute)">${pct} %</span></div>
+    <div style="height:12px;background:var(--chip);border-radius:6px;margin-top:8px;overflow:hidden"><div style="height:12px;width:${pct}%;background:linear-gradient(90deg,#5a9a42,#2f6224)"></div></div>
+    <div class="stats" style="margin-bottom:0"><div class="stat"><b>${lam.length}</b><span>Lämmer</span></div><div class="stat"><b>${st("lebend")}</b><span>lebend</span></div><div class="stat"><b>${st("verkauft")}</b><span>verkauft</span></div><div class="stat"><b>${st("tot")}</b><span>verendet</span></div></div>
+  </div>
+  <h2>⏳ Noch nicht gelammt <span style="font-size:14px;color:var(--mute);font-family:inherit">${offen.length}</span></h2>
+  ${offen.length?offen.map(s=>{const l=lammFor(s.id)[0];return `<div class="card ewe" data-id="${esc(s.id)}"><div class="tag ${s.rasse==="Coburger Fuchs"?"fuchs":""}">${esc(kurzNr(s.nr))}</div><div class="info"><div class="name">${esc(s.nr)}</div><div class="sub">${esc(s.rasse||"")}${s.geb?" · "+alter(s.geb):""}</div><div class="med">${l?"zuletzt gelammt: "+fmtD(l.datum):"noch nie gelammt"}${s.zugang&&s.zugang.startsWith(jahr)?" · Zugang "+fmtD(s.zugang):""}</div>${s.auff?`<div class="warn">⚠ ${esc(s.auff)}</div>`:""}</div></div>`}).join(""):`<div class="empty">${akt.length?"🎉 Alle Mutterschafe haben "+jahr+" gelammt.":"Noch keine Mutterschafe erfasst."}</div>`}
+  <h2>💊 Laufende Wartezeiten <span style="font-size:14px;color:var(--mute);font-family:inherit">${wz.length}</span></h2>
+  ${wz.length?`<div class="card">${wz.map(x=>`<div class="lamb" data-b="${esc(x.id)}" style="cursor:pointer"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(x.medikament)}</b><span class="wz">bis ${fmtD(x.wartezeit)}</span></div><div style="color:var(--mute);font-size:13px">${tierText(x)} · noch ${Math.round((new Date(x.wartezeit)-new Date(today()))/864e5)} Tage</div></div>`).join("")}</div>`:`<div class="empty" style="padding:16px">Keine laufenden Wartezeiten.</div>`}
+  <h2>💶 Finanzen ${jahr}</h2>
+  <div class="card" style="padding:4px 16px"><div class="finrow"><span>Einnahmen</span><b style="color:var(--acc)">${eur(ein)}</b></div><div class="finrow"><span>Ausgaben</span><b style="color:var(--danger)">${eur(aus)}</b></div><div class="finrow" style="border:0"><b>Ergebnis</b><b style="color:${ein-aus>=0?"var(--acc)":"var(--danger)"}">${eur(ein-aus)}</b></div></div>
+  ${Object.keys(tbl).length?`<h2>🧹 Stallbuch – zuletzt</h2><div class="card">${Object.values(tbl).slice(0,5).map(e=>`<div class="lamb" style="display:flex;justify-content:space-between;gap:8px"><b>${esc(e.taetigkeit)}</b><span style="color:var(--mute)">${vor(e.datum)}</span></div>`).join("")}</div>`:""}
+  </main>`}
+function bindHome(){
+  const y=$("hyr");if(y)y.onchange=()=>{S.hyear=y.value;render()};
+  const bt=$("bt");if(bt)bt.onclick=()=>{S.view="betrieb";render();scrollTo(0,0)};
+  document.querySelectorAll("[data-id]").forEach(x=>x.onclick=()=>{S.sel=x.dataset.id;S.view="detail";render();scrollTo(0,0)});
+  document.querySelectorAll("[data-b]").forEach(x=>x.onclick=()=>behForm(S.beh.find(y=>y.id===x.dataset.b)));
+}
+
+/* ---------- Medikamentenliste ---------- */
+function medHTML(){
+  const list=S.med.slice().sort((a,b)=>(a.name||"").localeCompare(b.name||"","de"));
+  return subHead("📋 Medikamente","Behandlungen")+`<main>
+  <div class="note">Hier hinterlegst du deine Medikamente mit Wartezeit. Bei einer Behandlung wird die Wartezeit dann automatisch ab dem Behandlungsdatum berechnet.</div>
+  ${list.length?list.map(m=>{const used=S.beh.filter(b=>findMed(b.medikament)===m).map(b=>b.datum).sort().pop();return `<div class="card" data-m="${esc(m.id)}" style="cursor:pointer">
+    <div style="display:flex;justify-content:space-between;gap:8px;font-weight:600"><span>${esc(m.name)}</span><span style="color:var(--danger)">${m.wzFleisch!==""&&m.wzFleisch!=null?esc(m.wzFleisch)+" Tage":"–"}</span></div>
+    <div style="color:var(--mute);font-size:14px">Wartezeit essbares Gewebe${m.wzMilch?` · Milch ${esc(m.wzMilch)} Tage`:""}${m.wirkstoff?" · "+esc(m.wirkstoff):""}</div>
+    ${m.dosierung?`<div class="med">Dosierung: ${esc(m.dosierung)}</div>`:""}${used?`<div class="med">zuletzt verwendet: ${fmtD(used)}</div>`:""}</div>`}).join(""):`<div class="empty">Noch keine Medikamente hinterlegt.<br>Tippe auf „+ Medikament“.</div>`}
+  </main>${S.db?`<button class="fab" id="addm">+ Medikament</button>`:""}`}
+function bindMed(){$("bk").onclick=()=>{S.view="list";render()};const a=$("addm");if(a)a.onclick=()=>medForm();document.querySelectorAll("[data-m]").forEach(x=>x.onclick=()=>medForm(S.med.find(y=>y.id===x.dataset.m)))}
+function medForm(m){const neu=!m;m=m||{};
+  openSheet(`<h3>${neu?"Neues Medikament":"Medikament bearbeiten"}</h3><form id="f">
+    <label>Name *</label><input name="name" required value="${esc(m.name)}" placeholder="z. B. Cydectin 0,1 %">
+    <div class="row"><div><label>Wartezeit Fleisch (Tage) *</label><input name="wzFleisch" required inputmode="numeric" value="${esc(m.wzFleisch)}" placeholder="z. B. 14"></div>
+    <div><label>Wartezeit Milch (Tage)</label><input name="wzMilch" inputmode="numeric" value="${esc(m.wzMilch)}"></div></div>
+    <label>Wirkstoff / Art</label><input name="wirkstoff" value="${esc(m.wirkstoff)}" placeholder="z. B. Moxidectin, Entwurmung">
+    <label>Dosierung</label><input name="dosierung" value="${esc(m.dosierung)}" placeholder="z. B. 1 ml / 5 kg oral">
+    <label>Notiz</label><textarea name="notiz">${esc(m.notiz)}</textarea>
+    <div class="acts">${neu?"":`<button type="button" class="btn del" id="del">Löschen</button>`}<button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div></form>`);
+  $("cx").onclick=closeSheet;
+  if(!neu)armDelete($("del"),async()=>{try{await S.db.doc("medikamente/"+m.id).delete();closeSheet();toast("Gelöscht")}catch(x){fail(x)}});
+  $("f").onsubmit=async ev=>{ev.preventDefault();const d=Object.fromEntries(new FormData(ev.target));for(const k in d)d[k]=String(d[k]).trim();
+    if(!/^\d+$/.test(d.wzFleisch)){toast("Wartezeit bitte als ganze Zahl (Tage)");return}
+    if(d.wzMilch&&!/^\d+$/.test(d.wzMilch)){toast("Wartezeit Milch bitte als ganze Zahl");return}
+    if(S.med.some(x=>x.id!==m.id&&(x.name||"").trim().toLowerCase()===d.name.toLowerCase())){toast("Dieses Medikament gibt es schon");return}
+    d.geaendert=new Date().toISOString();
+    try{if(neu)await S.db.collection("medikamente").add(d);else await S.db.doc("medikamente/"+m.id).set(d);closeSheet();toast("Gespeichert")}catch(x){fail(x)}};
+}
+
+/* ---------- Kundenverzeichnis ---------- */
+function kundenHTML(){
+  const q=(S.kq||"").trim().toLowerCase();
+  const list=S.kunden.filter(k=>!q||[k.name,k.ort,k.telefon,k.notiz].join(" ").toLowerCase().includes(q)).map(k=>({k,st:kundeStats(k)})).sort((a,b)=>(a.k.name||"").localeCompare(b.k.name||"","de"));
+  return subHead("👥 Lammkunden","Finanzen")+`<main>
+  <input id="kq" type="search" placeholder="Kunde suchen …" value="${esc(S.kq||"")}" style="margin-bottom:12px">
+  ${list.length?list.map(({k,st})=>`<div class="card finitem" data-k="${esc(k.id)}">
+    <div class="finnr" style="font-size:16px">👤</div>
+    <div class="info"><div class="name">${esc(k.name)}</div><div class="sub">${[k.ort,k.telefon].filter(Boolean).map(esc).join(" · ")||"&nbsp;"}</div>
+    <div class="med">${st.n?`${st.n} Käufe${st.lamm?" · "+st.lamm+" Lämmer":""} · zuletzt ${fmtD(st.last)}`:"noch kein Kauf"}</div></div>
+    <div class="finbetrag" style="color:var(--acc)">${st.sum?eur(st.sum):""}</div></div>`).join(""):`<div class="empty">${S.kunden.length?"Keine Treffer.":"Noch keine Kunden.<br>Tippe auf „+ Kunde“."}</div>`}
+  </main>${S.db?`<button class="fab" id="addk">+ Kunde</button>`:""}`}
+function bindKunden(){$("bk").onclick=()=>{S.view="list";render()};const a=$("addk");if(a)a.onclick=()=>kundeForm();
+  document.querySelectorAll("[data-k]").forEach(x=>x.onclick=()=>kundeForm(S.kunden.find(y=>y.id===x.dataset.k)));
+  const kq=$("kq");kq.oninput=()=>{S.kq=kq.value;const p=kq.selectionStart;render();const n=$("kq");n.focus();n.setSelectionRange(p,p)}}
+function kundeForm(k){const neu=!k;k=k||{};const st=neu?null:kundeStats(k);
+  openSheet(`<h3>${neu?"Neuer Kunde":"Kunde bearbeiten"}</h3>
+    ${st&&st.n?`<div class="note" style="margin-top:8px">💶 ${st.n} Käufe · ${eur(st.sum)} gesamt${st.lamm?" · "+st.lamm+" Lämmer":""} · zuletzt ${fmtD(st.last)}</div>`:""}<form id="f">
+    <label>Name *</label><input name="name" required value="${esc(k.name)}" placeholder="z. B. Hotel zur Post">
+    <div class="row"><div><label>Telefon</label><input name="telefon" inputmode="tel" value="${esc(k.telefon)}"></div><div><label>E-Mail</label><input name="email" type="email" value="${esc(k.email)}"></div></div>
+    <label>Straße</label><input name="strasse" value="${esc(k.strasse)}">
+    <div class="row"><div style="flex:.4"><label>PLZ</label><input name="plz" inputmode="numeric" value="${esc(k.plz)}"></div><div><label>Ort</label><input name="ort" value="${esc(k.ort)}"></div></div>
+    <label>Notiz (z. B. Wünsche, halbes/ganzes Lamm)</label><textarea name="notiz">${esc(k.notiz)}</textarea>
+    <div class="acts">${neu?"":`<button type="button" class="btn del" id="del">Löschen</button>`}<button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div></form>`);
+  $("cx").onclick=closeSheet;
+  if(!neu)armDelete($("del"),async()=>{try{await S.db.doc("kunden/"+k.id).delete();closeSheet();toast("Gelöscht")}catch(x){fail(x)}});
+  $("f").onsubmit=async ev=>{ev.preventDefault();const d=Object.fromEntries(new FormData(ev.target));for(const k2 in d)d[k2]=String(d[k2]).trim();
+    if(S.kunden.some(x=>x.id!==k.id&&(x.name||"").trim().toLowerCase()===d.name.toLowerCase())){toast("Diesen Kunden gibt es schon");return}
+    d.geaendert=new Date().toISOString();
+    try{if(neu)await S.db.collection("kunden").add(d);else await S.db.doc("kunden/"+k.id).set(d);closeSheet();toast("Gespeichert")}catch(x){fail(x)}};
+}
+
+/* ---------- Behandlung (neu: Medikamentenliste, Lämmer) ---------- */
+function behForm(b,pre){
+  const aktive=S.schafe.filter(s=>s.status!=="abgegangen").sort((a,c)=>String(a.nr||"").localeCompare(String(c.nr||""),"de",{numeric:true}));
+  const lebL=alleLaemmer().filter(y=>y.status==="lebend");
+  b=b||{datum:today(),alle:false,alleL:false,schafIds:pre?[pre]:[],lammIds:[]};
+  const sel=new Set(b.schafIds||[]),lsel=new Set(b.lammIds||[]);let allE=!!b.alle,allL=!!b.alleL,q="";
+  const medNames=[...new Set([...S.med.map(m=>m.name),...S.beh.map(x=>x.medikament)].filter(Boolean))].sort((a,c)=>a.localeCompare(c,"de"));
+  openSheet(`<h3>${b.id?"Behandlung bearbeiten":"Neue Behandlung"}</h3><form id="f">
+    <label>Medikament *</label><input name="medikament" required list="ml" value="${esc(b.medikament)}" placeholder="aus Liste wählen oder eintippen"><datalist id="ml">${medNames.map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
+    <div id="mh" style="font-size:13px;color:var(--mute);margin-top:4px"></div>
+    <div class="row"><div><label>Datum *</label><input type="date" name="datum" required value="${esc(b.datum)}"></div>
+    <div><label>Wartezeit bis</label><input type="date" name="wartezeit" value="${esc(b.wartezeit)}"></div></div>
+    <div class="row"><div><label>Grund / Diagnose</label><input name="grund" value="${esc(b.grund)}" placeholder="z. B. Entwurmung"></div>
+    <div><label>Dosis / Menge</label><input name="dosis" value="${esc(b.dosis)}" placeholder="z. B. 5 ml oral"></div></div>
+    <div class="row"><div><label>Behandelt von</label><input name="von" value="${esc(b.von)}" placeholder="selbst / Tierarzt"></div>
+    <div><label>Charge / Beleg-Nr.</label><input name="charge" value="${esc(b.charge)}"></div></div>
+    <label>Welche Tiere?</label>
+    <div class="seg"><button type="button" class="chip" id="mAll">Alle Mutterschafe (${aktive.length})</button><button type="button" class="chip" id="mAllL">Alle Lämmer (${lebL.length})</button></div>
+    <div id="tl"></div>
+    <label>Notiz</label><textarea name="notiz">${esc(b.notiz)}</textarea>
+    <div class="acts">${b.id?`<button type="button" class="btn del" id="del">Löschen</button>`:""}<button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div></form>`);
+  const fM=document.querySelector("[name=medikament]"),fD=document.querySelector("[name=datum]"),fW=document.querySelector("[name=wartezeit]"),fDo=document.querySelector("[name=dosis]");
+  let wzTouched=!!b.id&&!!b.wartezeit;fW.addEventListener("input",()=>{wzTouched=true});
+  const calcWz=force=>{const m=findMed(fM.value);
+    if(!m){$("mh").innerHTML=fM.value&&S.med.length?`Nicht in der Medikamentenliste – Wartezeit bitte selbst eintragen.`:"";return}
+    const t=Number(m.wzFleisch)||0;$("mh").innerHTML=`📋 Wartezeit Fleisch: <b>${t} Tage</b>${m.wzMilch?` · Milch ${esc(m.wzMilch)} Tage`:""}${m.dosierung?` · Dosierung: ${esc(m.dosierung)}`:""}`;
+    if(!fDo.value&&m.dosierung)fDo.placeholder=m.dosierung;
+    if(fD.value&&(force||!wzTouched)){fW.value=t>0?addDays(fD.value,t):"";wzTouched=false}};
+  fM.addEventListener("input",()=>calcWz(true));fM.addEventListener("change",()=>calcWz(true));fD.addEventListener("change",()=>calcWz(!wzTouched));calcWz(false);
+  const drawT=()=>{
+    $("mAll").classList.toggle("on",allE);$("mAllL").classList.toggle("on",allL);
+    const extra=[...sel].filter(id=>!aktive.some(a=>a.id===id)).map(id=>S.schafe.find(x=>x.id===id)).filter(Boolean);
+    const extraL=[...lsel].filter(id=>!lebL.some(a=>a.id===id)).map(id=>lammById(id)).filter(Boolean);
+    const ewes=allE?[]:[...aktive,...extra].filter(s=>!q||String(s.nr).toLowerCase().includes(q));
+    const lambs=allL?[]:[...lebL,...extraL].filter(y=>!q||[y.nr,y.mutter&&y.mutter.nr].join(" ").toLowerCase().includes(q));
+    const nE=allE?aktive.length:sel.size,nL=allL?lebL.length:lsel.size;
+    $("tl").innerHTML=`<div style="color:var(--mute);font-size:13px;margin-top:6px">Gewählt: <b>${nE}</b> Mutterschafe · <b>${nL}</b> Lämmer</div>
+      ${allE&&allL?"":`<input id="tq" type="search" placeholder="Ohrmarke suchen …" value="${esc(q)}" style="margin-top:8px">
+      <div class="chklist">${allE?"":`<div class="cksec">🐑 Mutterschafe</div>`+(ewes.map(s=>`<label class="ck"><input type="checkbox" data-s="${esc(s.id)}" ${sel.has(s.id)?"checked":""}><span><b>${esc(s.nr)}</b> <span style="color:var(--mute);font-size:13px">${esc(s.rasse||"")}</span></span></label>`).join("")||`<div class="ckleer">keine</div>`)}
+      ${allL?"":`<div class="cksec">🐣 Lämmer</div>`+(lambs.map(y=>`<label class="ck"><input type="checkbox" data-lb="${esc(y.id)}" ${lsel.has(y.id)?"checked":""}><span>${lammLabel(y)}</span></label>`).join("")||`<div class="ckleer">keine lebenden Lämmer</div>`)}</div>`}`;
+    const tq=$("tq");if(tq)tq.oninput=()=>{q=tq.value.toLowerCase();const p=tq.selectionStart;drawT();const n=$("tq");n.focus();n.setSelectionRange(p,p)};
+    document.querySelectorAll("[data-s]").forEach(c=>c.onchange=()=>{c.checked?sel.add(c.dataset.s):sel.delete(c.dataset.s);drawT()});
+    document.querySelectorAll("[data-lb]").forEach(c=>c.onchange=()=>{c.checked?lsel.add(c.dataset.lb):lsel.delete(c.dataset.lb);drawT()});
+  };
+  $("mAll").onclick=()=>{allE=!allE;drawT()};$("mAllL").onclick=()=>{allL=!allL;drawT()};drawT();
+  $("cx").onclick=closeSheet;
+  if(b.id)armDelete($("del"),async()=>{try{await S.db.doc("behandlungen/"+b.id).delete();closeSheet();toast("Gelöscht")}catch(x){fail(x)}});
+  $("f").onsubmit=async ev=>{ev.preventDefault();const d=Object.fromEntries(new FormData(ev.target));for(const k in d)d[k]=String(d[k]).trim();
+    d.alle=allE;d.alleL=allL;d.schafIds=allE?aktive.map(s=>s.id):[...sel];d.lammIds=allL?lebL.map(y=>y.id):[...lsel];
+    if(!d.schafIds.length&&!d.lammIds.length){toast("Bitte mindestens ein Tier auswählen");return}
+    d.geaendert=new Date().toISOString();
+    try{if(b.id)await S.db.doc("behandlungen/"+b.id).set(d);else await S.db.collection("behandlungen").add(d);closeSheet();toast("Gespeichert")}catch(x){fail(x)}};
+}
+
 /* ---------- sheets ---------- */
+
 
 function openSheet(html){$("sheet").innerHTML=html;$("ov").classList.add("open");document.body.style.overflow="hidden"}
 function closeSheet(){$("ov").classList.remove("open");document.body.style.overflow=""}
@@ -682,10 +831,10 @@ function fail(e){
 const KEY="herdenbuch-v1";
 const BETRIEB_START={};
 let store;
-function loadStore(){try{const o=JSON.parse(localStorage.getItem(KEY));if(o&&o.schafe&&o.lammungen){o.behandlungen=o.behandlungen||{};o.finanzen=o.finanzen||{};o.stallbuch=o.stallbuch||{};o.meta=o.meta||{};o.betrieb=o.betrieb||{...BETRIEB_START};return o}}catch(e){}return{schafe:{},lammungen:{},finanzen:{},behandlungen:{},stallbuch:{},meta:{},betrieb:{...BETRIEB_START}}}
+function loadStore(){try{const o=JSON.parse(localStorage.getItem(KEY));if(o&&o.schafe&&o.lammungen){o.behandlungen=o.behandlungen||{};o.finanzen=o.finanzen||{};o.kunden=o.kunden||{};o.medikamente=o.medikamente||{};o.stallbuch=o.stallbuch||{};o.meta=o.meta||{};o.betrieb=o.betrieb||{...BETRIEB_START};return o}}catch(e){}return{schafe:{},lammungen:{},finanzen:{},kunden:{},medikamente:{},behandlungen:{},stallbuch:{},meta:{},betrieb:{...BETRIEB_START}}}
 function saveStore(){store.meta=store.meta||{};store.meta.geaendert=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(store))}
 function ensureLambIds(o){for(const[lid,l]of Object.entries(o.lammungen||{}))(l.laemmer||[]).forEach((y,i)=>{if(!y.id)y.id=lid+"_"+i})}
-function refresh(){ensureLambIds(store);S.schafe=Object.entries(store.schafe).map(([id,d])=>({...d,id}));S.lamm=Object.entries(store.lammungen).map(([id,d])=>({...d,id}));S.beh=Object.entries(store.behandlungen).map(([id,d])=>({...d,id}));S.tb=Object.entries(store.stallbuch).map(([id,d])=>({...d,id}));S.fin=Object.entries(store.finanzen).map(([id,d])=>({...d,id}));render()}
+function refresh(){ensureLambIds(store);S.schafe=Object.entries(store.schafe).map(([id,d])=>({...d,id}));S.lamm=Object.entries(store.lammungen).map(([id,d])=>({...d,id}));S.beh=Object.entries(store.behandlungen).map(([id,d])=>({...d,id}));S.tb=Object.entries(store.stallbuch).map(([id,d])=>({...d,id}));S.fin=Object.entries(store.finanzen).map(([id,d])=>({...d,id}));S.kunden=Object.entries(store.kunden).map(([id,d])=>({...d,id}));S.med=Object.entries(store.medikamente).map(([id,d])=>({...d,id}));render()}
 const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const localDb={
   doc(path){const[c,id]=path.split("/");return{
@@ -721,7 +870,7 @@ function importJSON(file){
   const fr=new FileReader();fr.onload=()=>{try{
     const inc=JSON.parse(fr.result);if(!inc.schafe||!inc.lammungen)throw 0;
     const del={...(store.deleted||{}),...(inc.deleted||{})};let n=0;
-    for(const c of ["schafe","lammungen","behandlungen","stallbuch","finanzen"])for(const[id,d]of Object.entries(inc[c]||{})){
+    for(const c of ["schafe","lammungen","behandlungen","stallbuch","finanzen","kunden","medikamente"])for(const[id,d]of Object.entries(inc[c]||{})){
       const cur=store[c][id];if(del[c+"/"+id])continue;
       if(!cur||(d.geaendert||"")>(cur.geaendert||"")){store[c][id]=d;n++}}
     for(const k of Object.keys(del)){const[c,id]=k.split("/");if(store[c])delete store[c][id]}
