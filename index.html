@@ -182,12 +182,13 @@ function render(){
   const app=$("app");
   if(S.view==="detail"&&S.sel){app.innerHTML=detailHTML();return}
   if(S.view==="betrieb"){app.innerHTML=betriebHTML();bindBetrieb();return}
+  if(S.view==="version"){app.innerHTML=versionHTML();bindVersion();return}
+  if(S.view==="felder"){app.innerHTML=felderHTML();bindFelder();return}
   if(S.view==="med"){app.innerHTML=medHTML();bindMed();return}
   if(S.view==="kunden"){app.innerHTML=kundenHTML();bindKunden();return}
   if(S.tab==="home"){app.innerHTML=homeHTML()+tabbar();bindHome();bindTabs();return}
   if(S.tab==="beh"){app.innerHTML=behHTML()+tabbar();bindBeh();bindTabs();return}
   if(S.tab==="lm"){app.innerHTML=lmHTML()+tabbar();bindLm();bindTabs();return}
-  if(S.view==="felder"){app.innerHTML=felderHTML();bindFelder();return}
   if(S.tab==="ernte"){app.innerHTML=ernteHTML()+tabbar();bindErnte();bindTabs();return}
   if(S.tab==="fin"){app.innerHTML=finHTML()+tabbar();bindFin();bindTabs();return}
   if(S.tab==="tb"){app.innerHTML=tbHTML()+tabbar();bindTb();bindTabs();return}
@@ -599,7 +600,7 @@ function homeHTML(){
   const fy=S.fin.filter(f=>(f.datum||"").startsWith(jahr)),ein=fy.filter(f=>f.art==="ein").reduce((a,f)=>a+f.betrag,0),aus=fy.filter(f=>f.art==="aus").reduce((a,f)=>a+f.betrag,0);
   const tbl={};for(const e of S.tb.slice().sort((a,b)=>(b.datum||"").localeCompare(a.datum||""))){const k=(e.taetigkeit||"").trim().toLowerCase();if(k&&!tbl[k])tbl[k]=e}
   const b=(store&&store.betrieb)||{};
-  return `<header><h1>🏠 Übersicht <small>${b.inhaber?esc(b.inhaber):""}</small><button class="btn sec sm" id="bt">🏡</button><button class="btn sec sm" id="dm">💾</button></h1><div id="synclink" style="cursor:pointer;margin-top:4px">${syncBadge()}</div></header><main>
+  return `<header><h1>🏠 Übersicht <small>${b.inhaber?esc(b.inhaber):""}</small><button class="btn sec sm" id="bt">🏡</button><button class="btn sec sm" id="dm">💾</button></h1><div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px"><div id="synclink" style="cursor:pointer">${syncBadge()}</div><span id="verlink" style="cursor:pointer;font-size:12px;color:rgba(255,255,255,.8)">ℹ️ Version ${APP_VERSION}</span></div></header><main>
   ${SY.uid?"":`<div class="card" id="syncban" style="cursor:pointer;border:2px solid var(--acc);display:flex;gap:12px;align-items:center"><div style="font-size:28px">☁️</div><div><b>Synchronisierung einrichten</b><div style="color:var(--mute);font-size:14px">Einmal anmelden – dann haben PC und iPhone immer denselben Stand.</div></div></div>`}
   <div class="yearbar"><span>📅 Ablammsaison</span><select id="hyr">${jahre.map(y=>`<option ${y===jahr?"selected":""}>${y}</option>`).join("")}</select></div>
   <div class="card">
@@ -615,7 +616,7 @@ function homeHTML(){
   <div class="card" style="padding:4px 16px"><div class="finrow"><span>Einnahmen</span><b style="color:var(--acc)">${eur(ein)}</b></div><div class="finrow"><span>Ausgaben</span><b style="color:var(--danger)">${eur(aus)}</b></div><div class="finrow" style="border:0"><b>Ergebnis</b><b style="color:${ein-aus>=0?"var(--acc)":"var(--danger)"}">${eur(ein-aus)}</b></div></div>
   ${Object.keys(tbl).length?`<h2>🧹 Stallbuch – zuletzt</h2><div class="card">${Object.values(tbl).slice(0,5).map(e=>`<div class="lamb" style="display:flex;justify-content:space-between;gap:8px"><b>${esc(e.taetigkeit)}</b><span style="color:var(--mute)">${vor(e.datum)}</span></div>`).join("")}</div>`:""}
   </main>`}
-function bindHome(){const sl=$("synclink");if(sl)sl.onclick=syncSheet;const sb=$("syncban");if(sb)sb.onclick=syncSheet;
+function bindHome(){const vl=$("verlink");if(vl)vl.onclick=()=>{S.view="version";render();scrollTo(0,0)};const sl=$("synclink");if(sl)sl.onclick=syncSheet;const sb=$("syncban");if(sb)sb.onclick=syncSheet;
   const y=$("hyr");if(y)y.onchange=()=>{S.hyear=y.value;render()};
   const bt=$("bt");if(bt)bt.onclick=()=>{S.view="betrieb";render();scrollTo(0,0)};
   document.querySelectorAll("[data-id]").forEach(x=>x.onclick=()=>{S.sel=x.dataset.id;S.view="detail";render();scrollTo(0,0)});
@@ -863,7 +864,52 @@ function feldForm(f){const neu=!f;f=f||{besitz:"Eigentum"};const n=neu?0:S.ernte
     try{if(neu)await S.db.collection("felder").add(d);else await S.db.doc("felder/"+f.id).set(d);closeSheet();toast("Gespeichert")}catch(x){fail(x)}};
 }
 
+/* ---------- Versionsbuch ---------- */
+const APP_VERSION="1.14";
+const ONLINE_URL="https://raw.githubusercontent.com/8p9754h2g7-dotcom/herdenbuch/main/index.html";
+const CHANGELOG=[
+ ["1.14","23.11.2026",["Versionsbuch: Neuigkeiten jeder Version und Anzeige, welche Version online ist","Hinweis „Neu in dieser Version“ nach jedem Update","Knopf „Jetzt aktualisieren“, wenn online eine neuere Version liegt"]],
+ ["1.13","23.11.2026",["Neuer Bereich 🌾 Ernte: Schnitte mit Feld, Beginn, Ende, Ballen und Art","Felderverzeichnis mit Größe (ha), Flurnummer, Eigentum/Pacht","Vergleich je Feld und je Jahr, Ballen je ha, Excel-Export","Finanz-Kategorie „Ernte & Lohnarbeit“"]],
+ ["1.12","23.11.2026",["Suchfeld im Bereich Lämmer (Lammnummer oder Mutterschaf)","Name für Böcke – Bock „Felix“ hinterlegt","Deckbock bei neuer Ablammung automatisch vorausgewählt","Alter ohne Geburtsdatum wird ab „Zugang am“ berechnet (mind. …)"]],
+ ["1.11","23.11.2026",["Cloud-Synchronisierung: PC und iPhone haben denselben Datenstand","Offline weiterarbeiten – Änderungen werden später übertragen"]],
+ ["1.10","23.11.2026",["Böcke als eigener Tier-Typ","Rassen Charollais und Jura","Filter „Unvollständig“ für fehlende Pflichtangaben","Schafbestand aus Excel importiert"]],
+ ["1.9","20.11.2026",["Neue Startseite „Übersicht“: wer hat noch nicht gelammt, laufende Wartezeiten, Finanzen","Medikamentenliste mit automatischer Wartezeit-Berechnung","Lämmer bei Behandlungen auswählbar","Verzeichnis der Lammkunden, Auswahl beim Verkauf"]],
+ ["1.8","18.11.2026",["Anmeldemaske mit Passwort","Jahresauswahl bei Stallbuch, Behandlungen und Lämmern"]],
+ ["1.7","18.11.2026",["Pflichtfelder bei Mutterschafen, Felder Name/Mutter entfernt","Lämmer per Ohrmarke dem Verkauf zuordnen – Erlöse je Mutterschaf","Kaufpreis wird als Ausgabe „Nachzucht“ gebucht"]],
+ ["1.6","18.11.2026",["Bereich 💶 Finanzen mit Jahresübersicht und Kategorien","Import der bisherigen Excel-Liste (CSV)"]],
+ ["1.5","18.11.2026",["Lämmer: Reiter Verkauft und Verendet / tot geboren, Status-Schild"]],
+ ["1.4","18.11.2026",["Betriebsstammdaten (🏡)","Installierbare App für iPhone und PC"]],
+ ["1.3","18.11.2026",["Bereich 🐣 Lämmer mit Alter","Grünes Design","Bestand als CSV","Jahresauswahl der Ablamm-Zahlen"]],
+ ["1.2","18.11.2026",["Behandlungen und Stallbuch","Geschlecht „weiblich/männlich“"]],
+ ["1.0","18.11.2026",["Erste Version: Mutterschafe mit Stammdaten und Ablammungen"]]];
+const cmpVer=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
+async function onlineVersion(){try{const r=await fetch(ONLINE_URL+"?t="+Date.now(),{cache:"no-store"});if(!r.ok)return null;const t=await r.text();const m=t.match(/const APP_VERSION="([\d.]+)"/);return m?m[1]:"0"}catch(e){return null}}
+async function forceUpdate(){try{if(navigator.serviceWorker){const rs=await navigator.serviceWorker.getRegistrations();for(const r of rs){try{await r.update()}catch(e){}}}if(window.caches){for(const k of await caches.keys())await caches.delete(k)}}catch(e){}location.reload()}
+function versionHTML(){
+  return subHead("ℹ️ Versionsbuch","Zurück")+`<main>
+  <div class="card"><div class="finrow"><span>Installiert auf diesem Gerät</span><b>Version ${APP_VERSION}</b></div>
+    <div class="finrow" style="border:0"><span>Online verfügbar</span><b id="onv" style="color:var(--mute)">wird geprüft …</b></div>
+    <div id="updbox"></div></div>
+  ${CHANGELOG.map(([v,d,items],i)=>`<div class="card"${v===APP_VERSION?' style="border:2px solid var(--acc)"':""}>
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:16px">Version ${v}${v===APP_VERSION?' <span class="badge" style="background:var(--acc);color:#fff">aktuell</span>':""}</b><span style="color:var(--mute);font-size:13px">${d}</span></div>
+    <ul style="margin:8px 0 0;padding-left:20px">${items.map(t=>`<li style="margin:3px 0">${esc(t)}</li>`).join("")}</ul></div>`).join("")}
+  </main>`}
+async function bindVersion(){$("bk").onclick=()=>{S.view="list";render()};
+  const ov=await onlineVersion();const el=$("onv");if(!el)return;
+  if(!ov){el.textContent=navigator.onLine?"nicht prüfbar":"offline – nicht prüfbar";return}
+  const c=cmpVer(ov,APP_VERSION);el.textContent=ov==="0"?"ältere Version (vor 1.14)":"Version "+ov;
+  if(c<0){el.style.color="var(--danger)";$("updbox").innerHTML=`<div class="note" style="margin-top:8px">Online liegt noch eine ältere Version. Bitte die neue index.html auf GitHub hochladen.</div>`;return}
+  if(c>0){el.style.color="var(--danger)";$("updbox").innerHTML=`<div class="note" style="margin-top:8px">Es gibt eine neuere Version. Tippe auf „Jetzt aktualisieren“ – deine Daten bleiben erhalten.</div><button class="btn" id="updnow" style="width:100%">🔄 Jetzt aktualisieren</button>`;$("updnow").onclick=forceUpdate}
+  else{el.style.color="var(--acc)";el.textContent+=" ✓ aktuell"}}
+function zeigeNeuigkeiten(){let seen="";try{seen=localStorage.getItem("herdenbuch-version")||""}catch(e){}
+  if(seen===APP_VERSION)return;try{localStorage.setItem("herdenbuch-version",APP_VERSION)}catch(e){}
+  if(!seen){if(Object.keys(store.schafe||{}).length)seen="1.13";else return} // Erstinstallation: kein Hinweis
+  const neu=CHANGELOG.filter(([v])=>cmpVer(v,seen)>0);if(!neu.length)return;
+  openSheet(`<h3>🎉 Neu in Version ${APP_VERSION}</h3>${neu.map(([v,d,items])=>`<div style="margin-top:12px"><b>Version ${v}</b> <span style="color:var(--mute);font-size:13px">${d}</span><ul style="margin:6px 0 0;padding-left:20px">${items.map(t=>`<li style="margin:3px 0">${esc(t)}</li>`).join("")}</ul></div>`).join("")}
+    <div class="acts"><button class="btn" id="cx">Alles klar</button></div>`);$("cx").onclick=closeSheet}
+
 /* ---------- sheets ---------- */
+
 
 
 
@@ -1034,11 +1080,12 @@ function dataMenu(){
   <button class="btn sec" style="width:100%;margin-top:10px" id="csvs">🐑 Aktueller Mutterschaf-Bestand (CSV)</button>
   <button class="btn sec" style="width:100%;margin-top:10px" id="csv">📊 Schafe & Lämmer als Excel-Tabelle (CSV)</button>
   <button class="btn sec" style="width:100%;margin-top:10px" id="csvb">💊 Behandlungen als Excel-Tabelle (CSV)</button>
-  <button class="btn" style="width:100%;margin-top:22px" id="syb">☁️ Synchronisierung ${SY.uid?"(angemeldet)":"einrichten"}</button>
+  <button class="btn sec" style="width:100%;margin-top:22px" id="vrb">ℹ️ Versionsbuch (installiert: ${APP_VERSION})</button>
+  <button class="btn" style="width:100%;margin-top:10px" id="syb">☁️ Synchronisierung ${SY.uid?"(angemeldet)":"einrichten"}</button>
   <button class="btn sec" style="width:100%;margin-top:10px" id="pwc">🔑 Passwort ändern</button>
   <button class="btn sec" style="width:100%;margin-top:10px" id="lknow">🔒 Jetzt sperren</button>
   <div class="acts"><button class="btn sec" id="cx">Schließen</button></div>`);
-  $("pwc").onclick=()=>{closeSheet();showLock("change")};$("syb").onclick=()=>{closeSheet();setTimeout(syncSheet,50)};$("lknow").onclick=()=>{closeSheet();showLock(pwData()?"unlock":"setup")};
+  $("vrb").onclick=()=>{closeSheet();S.view="version";render();scrollTo(0,0)};$("pwc").onclick=()=>{closeSheet();showLock("change")};$("syb").onclick=()=>{closeSheet();setTimeout(syncSheet,50)};$("lknow").onclick=()=>{closeSheet();showLock(pwData()?"unlock":"setup")};
   $("ex").onclick=exportJSON;$("csv").onclick=exportCSV;$("csvb").onclick=exportBehCSV;$("csvs").onclick=exportBestandCSV;$("cx").onclick=closeSheet;
   $("im").onchange=e=>{if(e.target.files[0])importJSON(e.target.files[0])};
 }
@@ -1094,7 +1141,7 @@ function showLock(mode){
     const salt=newId()+newId();try{localStorage.setItem(PWKEY,JSON.stringify({salt,hash:await hashPw(p1,salt)}))}catch(e){err("Speichern nicht möglich");return}
     unlock();toast(mode==="setup"?"Passwort festgelegt":"Passwort geändert")};
 }
-function unlock(){const el=$("lock");if(el)el.remove();document.body.style.overflow=""}
+function unlock(){const el=$("lock");if(el)el.remove();document.body.style.overflow="";setTimeout(zeigeNeuigkeiten,300)}
 function lockInit(){showLock(pwData()?"unlock":"setup")}
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(document.hidden)hiddenAt=Date.now();else if(hiddenAt&&Date.now()-hiddenAt>5*60*1000&&pwData()&&!$("lock"))showLock("unlock")});
