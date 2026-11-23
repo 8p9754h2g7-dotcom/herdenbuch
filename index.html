@@ -74,7 +74,7 @@ h2{font-size:17px;margin:18px 0 8px;display:flex;align-items:center;justify-cont
 .seg{display:flex;gap:6px}.seg .chip{flex:1;text-align:center}
 .note{background:var(--chip);border-radius:10px;padding:10px 12px;font-size:14px;color:var(--mute);margin-bottom:10px}
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:7;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
-.tabbar button{flex:1;min-width:0;border:0;background:none;font:inherit;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--mute);padding:8px 0 9px;cursor:pointer}
+.tabbar button{flex:1;min-width:0;border:0;background:none;font:inherit;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--mute);padding:8px 0 9px;cursor:pointer}
 .tabbar button b{display:block;font-size:20px;line-height:1.2}
 .tabbar button.on{color:var(--acc);font-weight:600}
 .fab{bottom:calc(76px + env(safe-area-inset-bottom))!important}
@@ -104,6 +104,7 @@ details.card summary::after{content:"▾";color:var(--mute)}details[open].card s
 .cksec{font-size:12px;font-weight:700;color:var(--mute);padding:10px 4px 4px;text-transform:uppercase;letter-spacing:.5px}
 .ckleer{color:var(--mute);font-size:13px;padding:6px 4px 10px}
 header h1{flex-wrap:wrap}
+.ftab.ernte td{font-size:14px}.ftab.ernte tr[data-e]{cursor:pointer}
 /* ===== Design: Grünland ===== */
 :root{
   --bg:#eef3e6;--card:#ffffff;--ink:#1f2d1a;--mute:#5f6f55;--line:#d5e0c8;
@@ -167,7 +168,7 @@ const bockLabel=x=>x.name?`${x.name} (${x.nr})`:x.nr;
 function defaultBock(){const bs=S.schafe.filter(x=>isBock(x)&&x.status!=="abgegangen");if(!bs.length)return"";if(bs.length===1)return bs[0].name||bs[0].nr;
   const last=S.lamm.slice().sort((a,b)=>(b.datum||"").localeCompare(a.datum||"")).find(l=>l.bock);return last?last.bock:(bs[0].name||bs[0].nr)}
 const istMutter=s=>s&&s.typ!=="Bock"&&s.status!=="abgegangen";
-const S={kunden:[],med:[],fin:[],tab:"home",beh:[],tb:[],db:null,schafe:[],lamm:[],loaded:{s:false,l:false},err:null,view:"list",sel:null,q:"",filter:"alle",readonly:false};
+const S={felder:[],ernte:[],kunden:[],med:[],fin:[],tab:"home",beh:[],tb:[],db:null,schafe:[],lamm:[],loaded:{s:false,l:false},err:null,view:"list",sel:null,q:"",filter:"alle",readonly:false};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmtD=d=>{if(!d)return"–";const [y,m,t]=d.split("-");return t?`${t}.${m}.${y}`:d};
@@ -186,6 +187,8 @@ function render(){
   if(S.tab==="home"){app.innerHTML=homeHTML()+tabbar();bindHome();bindTabs();return}
   if(S.tab==="beh"){app.innerHTML=behHTML()+tabbar();bindBeh();bindTabs();return}
   if(S.tab==="lm"){app.innerHTML=lmHTML()+tabbar();bindLm();bindTabs();return}
+  if(S.view==="felder"){app.innerHTML=felderHTML();bindFelder();return}
+  if(S.tab==="ernte"){app.innerHTML=ernteHTML()+tabbar();bindErnte();bindTabs();return}
   if(S.tab==="fin"){app.innerHTML=finHTML()+tabbar();bindFin();bindTabs();return}
   if(S.tab==="tb"){app.innerHTML=tbHTML()+tabbar();bindTb();bindTabs();return}
   const loading=!(S.loaded.s&&S.loaded.l);
@@ -309,7 +312,7 @@ function behCard(b){return `<div class="card" ${S.db?`data-b="${esc(b.id)}" styl
   <div style="display:flex;justify-content:space-between;gap:8px;font-weight:600"><span>${esc(b.medikament)}</span><span>${fmtD(b.datum)}</span></div>
   <div style="color:var(--mute);font-size:14px">${tierText(b)}${b.grund?" · "+esc(b.grund):""}${b.dosis?" · "+esc(b.dosis):""}${b.von?" · "+esc(b.von):""}</div>
   ${wzBadge(b)}${b.notiz?`<div style="color:var(--mute);font-size:14px;margin-top:4px;white-space:pre-wrap">${esc(b.notiz)}</div>`:""}</div>`}
-function tabbar(){return `<nav class="tabbar">${[["home","🏠","Übersicht"],["list","🐑","Schafe"],["lm","🐣","Lämmer"],["beh","💊","Behandl."],["tb","🧹","Stall"],["fin","💶","Finanzen"]].map(([k,i,t])=>`<button data-tab="${k}" class="${(S.tab||"home")===k?"on":""}"><b>${i}</b>${t}</button>`).join("")}</nav>`}
+function tabbar(){return `<nav class="tabbar">${[["home","🏠","Start"],["list","🐑","Schafe"],["lm","🐣","Lämmer"],["beh","💊","Behandl."],["tb","🧹","Stall"],["ernte","🌾","Ernte"],["fin","💶","Finanzen"]].map(([k,i,t])=>`<button data-tab="${k}" class="${(S.tab||"home")===k?"on":""}"><b>${i}</b>${t}</button>`).join("")}</nav>`}
 function bindTabs(){document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;S.view="list";render();scrollTo(0,0)});const dm=$("dm");if(dm)dm.onclick=dataMenu}
 function behHTML(){
   const alle=S.beh.slice().sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
@@ -428,13 +431,13 @@ function betriebForm(){
 
 /* ---------- Finanzen ---------- */
 const EIN_KAT=["Lammfleisch / Tierverkauf","Wolle","Zuschüsse / Förderung","Privateinlage","Sonstige Einnahmen"];
-const AUS_KAT=["Nachzucht","Futter & Mineral","Einstreu & Stroh","Tierarzt & Medikamente","Versicherungen","Beiträge & Gebühren","Fahrzeuge & Maschinen","Stall- & Weidebedarf","Dünger & Kalk","Pacht","Gebäude & Hütten","Sonstige Ausgaben"];
+const AUS_KAT=["Nachzucht","Futter & Mineral","Einstreu & Stroh","Tierarzt & Medikamente","Versicherungen","Beiträge & Gebühren","Fahrzeuge & Maschinen","Stall- & Weidebedarf","Dünger & Kalk","Pacht","Ernte & Lohnarbeit","Gebäude & Hütten","Sonstige Ausgaben"];
 const eur=n=>(Number(n)||0).toLocaleString("de-DE",{style:"currency",currency:"EUR"});
 function parseBetrag(v){v=String(v??"").replace(/[€\s ]/g,"");if(!v)return null;if(v.includes(","))v=v.replace(/\./g,"").replace(",",".");const n=parseFloat(v);return isNaN(n)?null:Math.round(Math.abs(n)*100)/100}
 function parseDatum(v){v=String(v??"").trim();let m=v.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2}|\d{4})$/);if(m){let y=m[3].length===2?"20"+m[3]:m[3];return `${y}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`}m=v.match(/^(\d{4})-(\d{2})-(\d{2})/);return m?`${m[1]}-${m[2]}-${m[3]}`:null}
 function guessKat(text,partner,ein){const t=(text+" "+(partner||"")).toLowerCase();
   if(ein){if(/zuschuss|förder|prämie|beihilfe/.test(t))return EIN_KAT[2];if(/lamm|fleisch|schaf|tier|bock|aue/.test(t))return EIN_KAT[0];if(/wolle/.test(t))return EIN_KAT[1];if(/privat/.test(t))return EIN_KAT[3];return EIN_KAT[4]}
-  const r=[[/versicherung|rechtsschutz|haftpflicht|allianz/,3],[/pacht/,8],[/kaminkehrer|hütte|dach|gebäude/,9],[/stroh|einstreu|späne/,1],[/soja|salz|mineral|milchpulver|gerste|futter|hafer|heu|mais|leckstein|kraftfutter/,0],[/tierarzt|cydectin|impf|mittel|wurm|dr\.|medikament|klauen/,2],[/dünger|\bkas\b|kalk/,7],[/berufsgenossen|\bbg\b|beitrag|tierseuchenkasse|\btsk\b|gebühr|verband/,4],[/tüv|traktor|anhänger|diesel|reparatur|reifen|öl\b/,5],[/weidetor|zaun|schlauch|eimer|stall|tränke|netz|werkzeug|sackkarren/,6]];
+  const r=[[/versicherung|rechtsschutz|haftpflicht|allianz/,3],[/pacht/,8],[/kaminkehrer|hütte|dach|gebäude/,10],[/lohnunternehm|lohnarbeit|mähen|pressen|wickel|ballen|folie|ernte/,9],[/stroh|einstreu|späne/,1],[/soja|salz|mineral|milchpulver|gerste|futter|hafer|heu|mais|leckstein|kraftfutter/,0],[/tierarzt|cydectin|impf|mittel|wurm|dr\.|medikament|klauen/,2],[/dünger|\bkas\b|kalk/,7],[/berufsgenossen|\bbg\b|beitrag|tierseuchenkasse|\btsk\b|gebühr|verband/,4],[/tüv|traktor|anhänger|diesel|reparatur|reifen|öl\b/,5],[/weidetor|zaun|schlauch|eimer|stall|tränke|netz|werkzeug|sackkarren/,6]];
   if(/nachzucht|mutterschaf|zuchtschaf|jungschaf|zuchtbock|bock gekauft|kauf schaf/.test(t))return "Nachzucht";for(const[re,i]of r)if(re.test(t))return AUS_KAT[i+1];return "Sonstige Ausgaben"}
 const lammById=id=>alleLaemmer().find(y=>y.id===id);
 function finJahre(){const cur=new Date().getFullYear()+"";return[...new Set([cur,...S.fin.map(f=>(f.datum||"").slice(0,4)).filter(y=>/^\d{4}$/.test(y))])].sort().reverse()}
@@ -735,7 +738,133 @@ function behForm(b,pre){
     try{if(b.id)await S.db.doc("behandlungen/"+b.id).set(d);else await S.db.collection("behandlungen").add(d);closeSheet();toast("Gespeichert")}catch(x){fail(x)}};
 }
 
+/* ---------- Ernte & Felder ---------- */
+const ERNTE_ARTEN=["Heulage","Heu","Grummet","Stroh","Silage","Weide (kein Schnitt)"];
+const istWeide=a=>/^weide/i.test(a||"");
+const num=v=>{const n=parseFloat(String(v??"").replace(",","."));return isNaN(n)?0:n};
+const fmtN=n=>(Math.round(n*10)/10).toLocaleString("de-DE");
+const feldSort=(a,b)=>(Number(a.pos)||0)-(Number(b.pos)||0)||(a.name||"").localeCompare(b.name||"","de");
+const feldName=id=>{const f=S.felder.find(x=>x.id===id);return f?f.name:"(gelöscht)"};
+function ernteJahre(){const cur=new Date().getFullYear()+"";return[...new Set([cur,...S.ernte.map(e=>String(e.jahr||"")).filter(y=>/^\d{4}$/.test(y))])].sort().reverse()}
+function sumArten(list){const m={};for(const e of list)if(!istWeide(e.art))m[e.art]=(m[e.art]||0)+num(e.anzahl);return m}
+const artenTxt=m=>{const o=ERNTE_ARTEN.filter(a=>m[a]).map(a=>`${fmtN(m[a])} ${a}`);for(const a in m)if(!ERNTE_ARTEN.includes(a)&&m[a])o.push(`${fmtN(m[a])} ${a}`);return o.join(" · ")||"–"};
+function ernteHTML(){
+  const jahre=ernteJahre(),jahr=jahre.includes(S.eyear)?S.eyear:jahre[0];
+  const yl=S.ernte.filter(e=>String(e.jahr)===jahr);
+  const schnitte=[...new Set(yl.map(e=>Number(e.schnitt)||1))].sort((a,b)=>a-b);
+  const fpos=id=>{const f=S.felder.find(x=>x.id===id);return f?(Number(f.pos)||0):999};
+  const tot=sumArten(yl),gesamt=Object.values(tot).reduce((a,b)=>a+b,0);
+  // Vergleich der Jahre
+  const vj=ernteJahre().filter(y=>S.ernte.some(e=>String(e.jahr)===y)),arts=ERNTE_ARTEN.filter(a=>!istWeide(a)&&S.ernte.some(e=>e.art===a));
+  // je Feld
+  const fj=vj.slice(0,4);
+  return `<header><h1>🌾 Ernte <small></small><button class="btn sec sm" id="fdl">🗺️ Felder</button><button class="btn sec sm" id="dm">💾</button></h1></header><main>
+  <div class="yearbar"><span>📅 Erntejahr</span><select id="eyr">${jahre.map(y=>`<option ${y===jahr?"selected":""}>${y}</option>`).join("")}</select></div>
+  <div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:17px">${fmtN(gesamt)} Ballen ${jahr}</b><span style="color:var(--mute)">${schnitte.length} ${schnitte.length===1?"Schnitt":"Schnitte"}</span></div>
+    <div style="color:var(--mute);margin-top:4px">${artenTxt(tot)}</div></div>
+  ${schnitte.length?schnitte.map(sn=>{const rows=yl.filter(e=>(Number(e.schnitt)||1)===sn).sort((a,b)=>fpos(a.feldId)-fpos(b.feldId));
+    return `<h2>Schnitt ${sn} <span style="font-size:14px;color:var(--mute);font-family:inherit">${artenTxt(sumArten(rows))}</span></h2><div class="card" style="padding:4px 12px">
+    <table class="ftab ernte"><tr><th>Feld</th><th>Beginn</th><th>Ende</th><th>Ballen</th></tr>${rows.map(e=>`<tr data-e="${esc(e.id)}"><td><b>${esc(feldName(e.feldId))}</b></td><td>${istWeide(e.art)?`<span style="color:var(--mute)">Weidebetrieb</span>`:fmtD(e.beginn).slice(0,6)}</td><td>${istWeide(e.art)?"":fmtD(e.ende).slice(0,6)}</td><td>${istWeide(e.art)?"–":`<b>${fmtN(num(e.anzahl))}</b> ${esc(e.art)}`}</td></tr>`).join("")}</table></div>`}).join(""):`<div class="empty">Noch keine Ernte für ${jahr} erfasst.<br>Tippe auf „+ Schnitt erfassen“.</div>`}
+  ${vj.length?`<details class="card"><summary><b>Je Feld im Vergleich</b></summary><table class="ftab"><tr><th>Feld</th>${fj.map(y=>`<th>${y}</th>`).join("")}${S.felder.some(f=>num(f.ha))?`<th>je ha ${fj[0]}</th>`:""}</tr>
+    ${S.felder.slice().sort(feldSort).map(f=>{const v=y=>S.ernte.filter(e=>e.feldId===f.id&&String(e.jahr)===y&&!istWeide(e.art)).reduce((a,e)=>a+num(e.anzahl),0);const ha=num(f.ha);
+      return `<tr><td>${esc(f.name)}${ha?`<div style="color:var(--mute);font-size:12px">${fmtN(ha)} ha</div>`:""}</td>${fj.map(y=>`<td>${fmtN(v(y))}</td>`).join("")}${S.felder.some(x=>num(x.ha))?`<td>${ha?fmtN(v(fj[0])/ha):"–"}</td>`:""}</tr>`}).join("")}</table>
+    <div style="color:var(--mute);font-size:12px;margin-top:6px">Ballen gesamt (alle Arten, ohne Weide)${S.felder.some(f=>num(f.ha))?"":". Trage bei den Feldern die Größe in ha ein, dann siehst du auch den Ertrag je ha."}</div></details>
+  <details class="card"><summary><b>Jahre im Vergleich</b></summary><table class="ftab"><tr><th>Jahr</th>${arts.map(a=>`<th>${a}</th>`).join("")}<th>Gesamt</th></tr>
+    ${vj.map(y=>{const m=sumArten(S.ernte.filter(e=>String(e.jahr)===y));return `<tr><td><b>${y}</b></td>${arts.map(a=>`<td>${fmtN(m[a]||0)}</td>`).join("")}<td><b>${fmtN(Object.values(m).reduce((a,b)=>a+b,0))}</b></td></tr>`}).join("")}</table></details>`:""}
+  <button class="btn sec" id="eex" style="width:100%;margin-top:6px">📊 Ernte ${jahr} als Excel-Tabelle (CSV)</button>
+  </main>${S.db?`<button class="fab" id="adde">+ Schnitt erfassen</button>`:""}`}
+function bindErnte(){
+  const y=$("eyr");if(y)y.onchange=()=>{S.eyear=y.value;render()};
+  const fd=$("fdl");if(fd)fd.onclick=()=>{S.view="felder";render();scrollTo(0,0)};
+  const a=$("adde");if(a)a.onclick=()=>schnittForm();
+  document.querySelectorAll("[data-e]").forEach(r=>r.onclick=()=>ernteForm(S.ernte.find(x=>x.id===r.dataset.e)));
+  $("eex").onclick=exportErnteCSV;
+}
+function exportErnteCSV(){const jahre=ernteJahre(),jahr=jahre.includes(S.eyear)?S.eyear:jahre[0];
+  const rows=[["Jahr","Schnitt","Feld","ha","Beginn","Ende","Ballen","Art","Gewicht je Ballen (kg)","Notiz"]];
+  const fpos=id=>{const f=S.felder.find(x=>x.id===id);return f?(Number(f.pos)||0):999};
+  for(const e of S.ernte.filter(x=>String(x.jahr)===jahr).sort((a,b)=>(a.schnitt-b.schnitt)||fpos(a.feldId)-fpos(b.feldId))){const f=S.felder.find(x=>x.id===e.feldId)||{};
+    rows.push([e.jahr,e.schnitt,f.name||"",f.ha||"",fmtD(e.beginn),fmtD(e.ende),istWeide(e.art)?"":String(e.anzahl).replace(".",","),e.art,e.gewicht,e.notiz])}
+  download(`ernte_${jahr}_${stamp()}.csv`,"﻿"+rows.map(r=>r.map(csvCell).join(";")).join("\r\n"),"text/csv")}
+async function feldId(name){name=String(name||"").trim();const f=S.felder.find(x=>(x.name||"").trim().toLowerCase()===name.toLowerCase());if(f)return f.id;
+  const pos=S.felder.reduce((m,x)=>Math.max(m,Number(x.pos)||0),0)+1;const r=await S.db.collection("felder").add({name,ha:"",flur:"",besitz:"Eigentum",notiz:"",pos,geaendert:new Date().toISOString()});return r.id}
+// Neuer Schnitt: alle Felder auf einmal
+function schnittForm(){
+  const jahre=ernteJahre(),jahr=jahre.includes(S.eyear)?S.eyear:jahre[0];
+  const vorh=S.ernte.filter(e=>String(e.jahr)===jahr).map(e=>Number(e.schnitt)||1);const next=vorh.length?Math.max(...vorh)+1:1;
+  const fs=S.felder.slice().sort(feldSort);let extra=[];
+  const draw=()=>{$("frows").innerHTML=[...fs.map(f=>({id:f.id,name:f.name})),...extra.map((n,i)=>({id:"x"+i,name:n,neu:true}))].map(f=>`<div class="lambbox" style="padding:8px 12px">
+      <div class="row" style="align-items:center"><div style="flex:1.2;font-weight:600">${esc(f.name)}${f.neu?' <span style="color:var(--mute);font-size:12px">(neu)</span>':""}</div>
+      <div style="flex:.8"><input data-n="${esc(f.id)}" inputmode="decimal" placeholder="Ballen"></div>
+      <div style="flex:1.2"><select data-a="${esc(f.id)}"><option value="">wie oben</option>${ERNTE_ARTEN.map(a=>`<option>${a}</option>`).join("")}</select></div></div></div>`).join("")+
+      `<div class="row" style="margin-top:10px"><input id="nfeld" placeholder="weiteres Feld (Name)"><button type="button" class="btn sec" id="nfadd" style="flex:none">+ Feld</button></div>`;
+    $("nfadd").onclick=()=>{const v=$("nfeld").value.trim();if(v&&!fs.some(f=>f.name.toLowerCase()===v.toLowerCase())&&!extra.includes(v)){keep();extra.push(v);draw();restore()}}};
+  let vals={};const keep=()=>{document.querySelectorAll("[data-n]").forEach(i=>vals["n"+i.dataset.n]=i.value);document.querySelectorAll("[data-a]").forEach(i=>vals["a"+i.dataset.a]=i.value)};
+  const restore=()=>{document.querySelectorAll("[data-n]").forEach(i=>i.value=vals["n"+i.dataset.n]||"");document.querySelectorAll("[data-a]").forEach(i=>i.value=vals["a"+i.dataset.a]||"")};
+  openSheet(`<h3>Schnitt erfassen</h3><form id="f">
+    <div class="row"><div><label>Erntejahr</label><input name="jahr" inputmode="numeric" value="${esc(jahr)}"></div><div><label>Schnitt *</label><input name="schnitt" required inputmode="numeric" value="${next}"></div></div>
+    <div class="row"><div><label>Beginn</label><input type="date" name="beginn" value="${today()}"></div><div><label>Ende</label><input type="date" name="ende" value="${today()}"></div></div>
+    <label>Art (für alle Felder)</label><select name="art">${ERNTE_ARTEN.filter(a=>!istWeide(a)).map(a=>`<option ${a===(next===1?"Heulage":"Grummet")?"selected":""}>${a}</option>`).join("")}</select>
+    <label>Ballen je Feld <span style="font-weight:400">– leer lassen = nicht geerntet</span></label>
+    <div id="frows"></div>
+    <label>Notiz</label><textarea name="notiz" placeholder="z. B. Wetter, Qualität, Lohnunternehmer"></textarea>
+    <div class="acts"><button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div></form>`);
+  draw();$("cx").onclick=closeSheet;
+  document.querySelector("[name=beginn]").addEventListener("change",e=>{const en=document.querySelector("[name=ende]");if(!en.value||en.value<e.target.value)en.value=e.target.value});
+  $("f").onsubmit=async ev=>{ev.preventDefault();keep();const d=Object.fromEntries(new FormData(ev.target));
+    if(!/^\d{4}$/.test(d.jahr)){toast("Bitte Erntejahr vierstellig angeben");return}
+    const list=[...fs.map(f=>({id:f.id,name:f.name})),...extra.map((n,i)=>({id:"x"+i,name:n,neu:true}))].filter(f=>String(vals["n"+f.id]||"").trim()!==""||istWeide(vals["a"+f.id]));
+    if(!list.length){toast("Bitte bei mindestens einem Feld Ballen eintragen");return}
+    for(const f of list){const n=String(vals["n"+f.id]||"").trim();if(n&&isNaN(num(n))){toast(`Ungültige Ballenzahl bei ${f.name}`);return}}
+    try{for(const f of list){const fid=f.neu?await feldId(f.name):f.id;const art=vals["a"+f.id]||d.art;
+        await S.db.collection("ernte").add({jahr:d.jahr,schnitt:Number(d.schnitt)||1,feldId:fid,beginn:istWeide(art)?"":d.beginn,ende:istWeide(art)?"":d.ende,anzahl:istWeide(art)?0:num(vals["n"+f.id]),art,gewicht:"",notiz:d.notiz.trim(),geaendert:new Date().toISOString()})}
+      S.eyear=d.jahr;closeSheet();toast(`Schnitt ${d.schnitt} gespeichert (${list.length} Felder)`)}catch(x){fail(x)}};
+}
+// Einzelnen Eintrag bearbeiten
+function ernteForm(e){
+  const fs=S.felder.slice().sort(feldSort);
+  openSheet(`<h3>Ernte bearbeiten</h3><form id="f">
+    <div class="row"><div><label>Erntejahr</label><input name="jahr" inputmode="numeric" value="${esc(e.jahr)}"></div><div><label>Schnitt</label><input name="schnitt" inputmode="numeric" value="${esc(e.schnitt)}"></div></div>
+    <label>Feld</label><select name="feldId">${fs.map(f=>`<option value="${esc(f.id)}" ${f.id===e.feldId?"selected":""}>${esc(f.name)}</option>`).join("")}</select>
+    <div class="row"><div><label>Beginn</label><input type="date" name="beginn" value="${esc(e.beginn)}"></div><div><label>Ende</label><input type="date" name="ende" value="${esc(e.ende)}"></div></div>
+    <div class="row"><div><label>Ballen</label><input name="anzahl" inputmode="decimal" value="${istWeide(e.art)?"":String(e.anzahl).replace(".",",")}"></div>
+    <div><label>Art</label><select name="art">${[...ERNTE_ARTEN,...(ERNTE_ARTEN.includes(e.art)?[]:[e.art])].map(a=>`<option ${a===e.art?"selected":""}>${esc(a)}</option>`).join("")}</select></div></div>
+    <label>Gewicht je Ballen (kg)</label><input name="gewicht" inputmode="decimal" value="${esc(e.gewicht)}" placeholder="optional">
+    <label>Notiz</label><textarea name="notiz">${esc(e.notiz)}</textarea>
+    <div class="acts"><button type="button" class="btn del" id="del">Löschen</button><button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div></form>`);
+  $("cx").onclick=closeSheet;
+  armDelete($("del"),async()=>{try{await S.db.doc("ernte/"+e.id).delete();closeSheet();toast("Gelöscht")}catch(x){fail(x)}});
+  $("f").onsubmit=async ev=>{ev.preventDefault();const d=Object.fromEntries(new FormData(ev.target));for(const k in d)d[k]=String(d[k]).trim();
+    if(!/^\d{4}$/.test(d.jahr)){toast("Bitte Erntejahr vierstellig angeben");return}
+    const w=istWeide(d.art);if(!w&&(!d.anzahl||isNaN(num(d.anzahl)))){toast("Bitte Ballenzahl eintragen");return}
+    try{await S.db.doc("ernte/"+e.id).set({...d,schnitt:Number(d.schnitt)||1,anzahl:w?0:num(d.anzahl),beginn:w?"":d.beginn,ende:w?"":d.ende,geaendert:new Date().toISOString()});S.eyear=d.jahr;closeSheet();toast("Gespeichert")}catch(x){fail(x)}};
+}
+function felderHTML(){
+  const fs=S.felder.slice().sort(feldSort),haSum=fs.reduce((a,f)=>a+num(f.ha),0);
+  return subHead("🗺️ Felder","Ernte")+`<main>
+  ${fs.length?`<div class="card" style="display:flex;justify-content:space-between"><span>${fs.length} Felder</span><b>${haSum?fmtN(haSum)+" ha":"Größen fehlen"}</b></div>`:""}
+  ${fs.length?fs.map(f=>{const n=S.ernte.filter(e=>e.feldId===f.id).length;return `<div class="card finitem" data-fd="${esc(f.id)}"><div class="finnr" style="font-size:16px">🌾</div>
+    <div class="info"><div class="name">${esc(f.name)}</div><div class="sub">${[num(f.ha)?fmtN(num(f.ha))+" ha":"",f.flur?"Fl.-Nr. "+esc(f.flur):"",esc(f.besitz||"")].filter(Boolean).join(" · ")}</div><div class="med">${n} Ernte-Einträge</div></div></div>`}).join(""):`<div class="empty">Noch keine Felder.<br>Tippe auf „+ Feld“.</div>`}
+  </main>${S.db?`<button class="fab" id="addfd">+ Feld</button>`:""}`}
+function bindFelder(){$("bk").onclick=()=>{S.view="list";render()};const a=$("addfd");if(a)a.onclick=()=>feldForm();document.querySelectorAll("[data-fd]").forEach(x=>x.onclick=()=>feldForm(S.felder.find(y=>y.id===x.dataset.fd)))}
+function feldForm(f){const neu=!f;f=f||{besitz:"Eigentum"};const n=neu?0:S.ernte.filter(e=>e.feldId===f.id).length;
+  openSheet(`<h3>${neu?"Neues Feld":"Feld bearbeiten"}</h3><form id="f">
+    <label>Name *</label><input name="name" required value="${esc(f.name)}" placeholder="z. B. Pauli">
+    <div class="row"><div><label>Größe (ha)</label><input name="ha" inputmode="decimal" value="${esc(String(f.ha??"").replace(".",","))}" placeholder="z. B. 1,2"></div><div><label>Flurnummer</label><input name="flur" value="${esc(f.flur)}"></div></div>
+    <label>Besitz</label><select name="besitz">${["Eigentum","Pacht"].map(b=>`<option ${f.besitz===b?"selected":""}>${b}</option>`).join("")}</select>
+    <label>Reihenfolge (Position in Listen)</label><input name="pos" inputmode="numeric" value="${esc(f.pos??(S.felder.length+1))}">
+    <label>Notiz</label><textarea name="notiz">${esc(f.notiz)}</textarea>
+    <div class="acts">${neu?"":`<button type="button" class="btn del" id="del">Löschen</button>`}<button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div></form>`);
+  $("cx").onclick=closeSheet;
+  if(!neu)armDelete($("del"),async()=>{if(n){toast(`Feld hat ${n} Ernte-Einträge – erst diese löschen`);return}try{await S.db.doc("felder/"+f.id).delete();closeSheet();toast("Gelöscht")}catch(x){fail(x)}});
+  $("f").onsubmit=async ev=>{ev.preventDefault();const d=Object.fromEntries(new FormData(ev.target));for(const k in d)d[k]=String(d[k]).trim();
+    if(S.felder.some(x=>x.id!==f.id&&(x.name||"").trim().toLowerCase()===d.name.toLowerCase())){toast("Dieses Feld gibt es schon");return}
+    d.ha=d.ha?num(d.ha):"";d.pos=Number(d.pos)||0;d.geaendert=new Date().toISOString();
+    try{if(neu)await S.db.collection("felder").add(d);else await S.db.doc("felder/"+f.id).set(d);closeSheet();toast("Gespeichert")}catch(x){fail(x)}};
+}
+
 /* ---------- sheets ---------- */
+
 
 
 function openSheet(html){$("sheet").innerHTML=html;$("ov").classList.add("open");document.body.style.overflow="hidden"}
@@ -847,11 +976,11 @@ function fail(e){
 const KEY="herdenbuch-v1";
 const BETRIEB_START={};
 let store;
-function loadStore(){try{const o=JSON.parse(localStorage.getItem(KEY));if(o&&o.schafe&&o.lammungen){o.behandlungen=o.behandlungen||{};o.finanzen=o.finanzen||{};o.kunden=o.kunden||{};o.medikamente=o.medikamente||{};o.stallbuch=o.stallbuch||{};o.meta=o.meta||{};o.betrieb=o.betrieb||{...BETRIEB_START};return o}}catch(e){}return{schafe:{},lammungen:{},finanzen:{},kunden:{},medikamente:{},behandlungen:{},stallbuch:{},meta:{},betrieb:{...BETRIEB_START}}}
+function loadStore(){try{const o=JSON.parse(localStorage.getItem(KEY));if(o&&o.schafe&&o.lammungen){o.behandlungen=o.behandlungen||{};o.finanzen=o.finanzen||{};o.kunden=o.kunden||{};o.medikamente=o.medikamente||{};o.felder=o.felder||{};o.ernte=o.ernte||{};o.stallbuch=o.stallbuch||{};o.meta=o.meta||{};o.betrieb=o.betrieb||{...BETRIEB_START};return o}}catch(e){}return{schafe:{},lammungen:{},finanzen:{},kunden:{},medikamente:{},felder:{},ernte:{},behandlungen:{},stallbuch:{},meta:{},betrieb:{...BETRIEB_START}}}
 function saveStore(){store.meta=store.meta||{};store.meta.geaendert=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(store));if(typeof syncPush==="function")syncPush()}
 function ensureLambIds(o){for(const[lid,l]of Object.entries(o.lammungen||{}))(l.laemmer||[]).forEach((y,i)=>{if(!y.id)y.id=lid+"_"+i})}
 function migrateFelix(){const e=Object.entries(store.schafe||{}).find(([id,x])=>x.nr==="DE010801065313"&&x.typ==="Bock"&&!x.name);if(e&&!localStorage.getItem("herdenbuch-felix")){e[1].name="Felix";e[1].geaendert=new Date().toISOString();try{localStorage.setItem("herdenbuch-felix","1")}catch(x){}saveStore()}}
-function refresh(){ensureLambIds(store);migrateFelix();S.schafe=Object.entries(store.schafe).map(([id,d])=>({...d,id}));S.lamm=Object.entries(store.lammungen).map(([id,d])=>({...d,id}));S.beh=Object.entries(store.behandlungen).map(([id,d])=>({...d,id}));S.tb=Object.entries(store.stallbuch).map(([id,d])=>({...d,id}));S.fin=Object.entries(store.finanzen).map(([id,d])=>({...d,id}));S.kunden=Object.entries(store.kunden).map(([id,d])=>({...d,id}));S.med=Object.entries(store.medikamente).map(([id,d])=>({...d,id}));render()}
+function refresh(){ensureLambIds(store);migrateFelix();S.schafe=Object.entries(store.schafe).map(([id,d])=>({...d,id}));S.lamm=Object.entries(store.lammungen).map(([id,d])=>({...d,id}));S.beh=Object.entries(store.behandlungen).map(([id,d])=>({...d,id}));S.tb=Object.entries(store.stallbuch).map(([id,d])=>({...d,id}));S.fin=Object.entries(store.finanzen).map(([id,d])=>({...d,id}));S.kunden=Object.entries(store.kunden).map(([id,d])=>({...d,id}));S.med=Object.entries(store.medikamente).map(([id,d])=>({...d,id}));S.felder=Object.entries(store.felder).map(([id,d])=>({...d,id}));S.ernte=Object.entries(store.ernte).map(([id,d])=>({...d,id}));render()}
 const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const localDb={
   doc(path){const[c,id]=path.split("/");return{
@@ -887,7 +1016,7 @@ function importJSON(file){
   const fr=new FileReader();fr.onload=()=>{try{
     const inc=JSON.parse(fr.result);if(!inc.schafe||!inc.lammungen)throw 0;
     const del={...(store.deleted||{}),...(inc.deleted||{})};let n=0,skipNr=0;
-    for(const c of ["schafe","lammungen","behandlungen","stallbuch","finanzen","kunden","medikamente"])for(const[id,d]of Object.entries(inc[c]||{})){
+    for(const c of ["schafe","lammungen","behandlungen","stallbuch","finanzen","kunden","medikamente","felder","ernte"])for(const[id,d]of Object.entries(inc[c]||{})){
       const cur=store[c][id];if(del[c+"/"+id])continue;
       if(c==="schafe"&&!cur){const nn=String(d.nr||"").replace(/\s+/g,"").toLowerCase();if(nn&&Object.entries(store.schafe).some(([i2,x])=>i2!==id&&String(x.nr||"").replace(/\s+/g,"").toLowerCase()===nn)){skipNr=(skipNr||0)+1;continue}}
       if(!cur||(d.geaendert||"")>(cur.geaendert||"")){store[c][id]=d;n++}}
@@ -973,7 +1102,7 @@ document.addEventListener("visibilitychange",()=>{if(document.hidden)hiddenAt=Da
 /* ---------- Cloud-Synchronisierung (Firebase) ---------- */
 const FB_CONFIG={apiKey:"AIzaSyBQytVN_fPvSkOya9XJHK-4_2CjcEHha1s",authDomain:"herdenbuch-658b1.firebaseapp.com",projectId:"herdenbuch-658b1",storageBucket:"herdenbuch-658b1.firebasestorage.app",messagingSenderId:"689034701101",appId:"1:689034701101:web:0673474370a60c1a390ba4"};
 const FB_URL="https://www.gstatic.com/firebasejs/11.10.0/";
-const SYNC_C=["schafe","lammungen","behandlungen","stallbuch","finanzen","kunden","medikamente"];
+const SYNC_C=["schafe","lammungen","behandlungen","stallbuch","finanzen","kunden","medikamente","felder","ernte"];
 const SHADOWKEY="herdenbuch-shadow";
 const SY={state:"aus",email:"",fb:null,auth:null,fs:null,uid:null,unsub:[],first:{},pending:false,loading:false};
 let shadow={};try{shadow=JSON.parse(localStorage.getItem(SHADOWKEY))||{}}catch(e){shadow={}}
