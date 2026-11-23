@@ -450,6 +450,7 @@ function betriebForm(){
 /* ---------- Finanzen ---------- */
 const EIN_KAT=["Lammfleisch / Tierverkauf","Wolle","Zuschüsse / Förderung","Privateinlage","Sonstige Einnahmen"];
 const AUS_KAT=["Nachzucht","Futter & Mineral","Einstreu & Stroh","Tierarzt & Medikamente","Versicherungen","Beiträge & Gebühren","Fahrzeuge & Maschinen","Stall- & Weidebedarf","Dünger & Kalk","Pacht","Ernte & Lohnarbeit","Gebäude & Hütten","Sonstige Ausgaben"];
+const istOffen=f=>f&&(f.betrag==null||f.betrag===""||(Number(f.betrag)===0&&/betrag fehlt/i.test(f.notiz||"")));
 const eur=n=>(Number(n)||0).toLocaleString("de-DE",{style:"currency",currency:"EUR"});
 function parseBetrag(v){v=String(v??"").replace(/[€\s ]/g,"");if(!v)return null;if(v.includes(","))v=v.replace(/\./g,"").replace(",",".");const n=parseFloat(v);return isNaN(n)?null:Math.round(Math.abs(n)*100)/100}
 function parseDatum(v){v=String(v??"").trim();let m=v.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2}|\d{4})$/);if(m){let y=m[3].length===2?"20"+m[3]:m[3];return `${y}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`}m=v.match(/^(\d{4})-(\d{2})-(\d{2})/);return m?`${m[1]}-${m[2]}-${m[3]}`:null}
@@ -469,12 +470,12 @@ function finHTML(){
   const kat=a=>{const g={};for(const f of yl.filter(x=>x.art===a))g[f.kategorie||"Ohne Kategorie"]=(g[f.kategorie||"Ohne Kategorie"]||0)+(Number(f.betrag)||0);return Object.entries(g).sort((x,y)=>y[1]-x[1])};
   const katList=(a,col)=>{const k=kat(a),mx=Math.max(1,...k.map(x=>x[1]));return k.length?k.map(([n,v])=>`<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:14px"><span>${esc(n)}</span><b>${eur(v)}</b></div><div style="height:6px;background:var(--chip);border-radius:3px"><div style="height:6px;width:${(v/mx*100).toFixed(1)}%;background:${col};border-radius:3px"></div></div></div>`).join(""):`<div style="color:var(--mute);font-size:14px">Keine Einträge.</div>`};
   const q=(S.fq||"").trim().toLowerCase();
-  let list=yl.filter(f=>S.ff==="alle"||f.art===S.ff);
+  const nOff=S.fin.filter(istOffen).length;let list=S.ff==="offen"?S.fin.filter(istOffen):yl.filter(f=>S.ff==="alle"||f.art===S.ff);
   if(q)list=list.filter(f=>[f.text,f.partner,f.kategorie,f.notiz].join(" ").toLowerCase().includes(q));
   list.sort((a,b)=>(b.datum||"").localeCompare(a.datum||"")||(Number(b.nr)||0)-(Number(a.nr)||0));
   return `<header><h1>💶 Finanzen <small></small><button class="btn sec sm" id="kdl">👥 Kunden</button><button class="btn sec sm" id="dm">💾</button></h1>
     <input id="fq" type="search" placeholder="Suche: Text, Begünstigter, Kategorie …" value="${esc(S.fq||"")}">
-    <div class="chips">${[["alle","Alle"],["ein","Einnahmen"],["aus","Ausgaben"]].map(([k,t])=>`<button class="chip ${S.ff===k?"on":""}" data-ff="${k}">${t}</button>`).join("")}</div></header><main>
+    <div class="chips">${[["alle","Alle"],["ein","Einnahmen"],["aus","Ausgaben"],...(nOff?[["offen",`⏳ Betrag offen (${nOff})`]]:[])].map(([k,t])=>`<button class="chip ${S.ff===k?"on":""}" data-ff="${k}">${t}</button>`).join("")}</div></header><main>
   <div class="yearbar"><span>📅 Jahresübersicht</span><select id="fyr">${jahre.map(y=>`<option ${y===jahr?"selected":""}>${y}</option>`).join("")}</select></div>
   <div class="card" style="padding:4px 16px">
     <div class="finrow"><span>Einnahmen</span><b style="color:var(--acc)">${eur(ein)}</b></div>
@@ -491,7 +492,7 @@ function finHTML(){
   ${list.length?list.map(f=>`<div class="card finitem" data-fin="${esc(f.id)}">
     <div class="finnr">${esc(f.nr??"")}</div>
     <div class="info"><div class="name">${esc(f.text)}</div><div class="sub">${fmtD(f.datum)}${f.partner?" · "+esc(f.partner):""}</div><div class="med">${esc(f.kategorie||"")}${f.schafId?` · 🐑 verknüpft`:""}${(f.lammIds||[]).length?` · 🐣 ${f.lammIds.map(id=>{const y=lammById(id);return y?esc(y.nr||"o. Ohrmarke"):"?"}).join(", ")}`:""}</div></div>
-    <div class="finbetrag" style="color:${f.art==="ein"?"var(--acc)":"var(--danger)"}">${f.art==="ein"?"+":"−"} ${eur(f.betrag)}</div></div>`).join(""):`<div class="empty">${yl.length?"Keine Treffer.":`Noch keine Buchungen für ${jahr}.<br>Tippe auf „+ Buchung“ oder importiere deine Excel-Liste.`}</div>`}
+    ${istOffen(f)?`<div class="finbetrag" style="color:#b8862f">⏳ offen</div>`:`<div class="finbetrag" style="color:${f.art==="ein"?"var(--acc)":"var(--danger)"}">${f.art==="ein"?"+":"−"} ${eur(f.betrag)}</div>`}</div>`).join(""):`<div class="empty">${yl.length?"Keine Treffer.":`Noch keine Buchungen für ${jahr}.<br>Tippe auf „+ Buchung“ oder importiere deine Excel-Liste.`}</div>`}
   </main>${S.db?`<button class="fab" id="addf">+ Buchung</button>`:""}`}
 function bindFin(){const kd=$("kdl");if(kd)kd.onclick=()=>{S.view="kunden";render();scrollTo(0,0)};
   const a=$("addf");if(a)a.onclick=()=>finForm();
@@ -511,7 +512,8 @@ function finForm(f){
   openSheet(`<h3>${neu?"Neue Buchung":"Buchung bearbeiten"}${f.nr?` <span style="color:var(--mute);font-size:15px">Nr. ${esc(f.nr)}</span>`:""}</h3>${f.schafId?`<div class="note" style="margin-top:8px">🐑 Verknüpft mit Mutterschaf ${esc((S.schafe.find(x=>x.id===f.schafId)||{}).nr||"(gelöscht)")} – ein geänderter Betrag wird dort als Kaufpreis übernommen.</div>`:""}<form id="f">
     <div class="seg" style="margin-top:10px"><button type="button" class="chip" id="aE">＋ Einnahme</button><button type="button" class="chip" id="aA">− Ausgabe</button></div>
     <div class="row"><div><label>Datum *</label><input type="date" name="datum" required value="${esc(f.datum)}"></div>
-    <div><label>Betrag (€) *</label><input name="betrag" required inputmode="decimal" placeholder="0,00" value="${f.betrag!=null?String(f.betrag).replace(".",","):""}"></div></div>
+    <div><label>Betrag (€)</label><input name="betrag" inputmode="decimal" placeholder="leer = noch offen" value="${f.betrag!=null&&!istOffen(f)?String(f.betrag).replace(".",","):""}"></div></div>
+    <div style="font-size:12px;color:var(--mute);margin-top:4px">💡 Betrag noch unbekannt (z. B. Rechnung fehlt)? Einfach leer lassen – die Buchung erscheint dann auf der Startseite als offene Aufgabe.</div>
     <label>Beschreibung *</label><input name="text" required list="ftl" value="${esc(f.text)}" placeholder="z. B. 2x Sojaschrot 25 kg"><datalist id="ftl">${texte.map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
     <label>Kategorie</label><select name="kategorie" id="fkat">${katOpts()}</select>
     <label id="plab">${art==="ein"?"Käufer / Zahler":"Begünstigter"}</label>
@@ -552,12 +554,13 @@ function finForm(f){
     if(f.schafId){const sf=S.schafe.find(x=>x.id===f.schafId);if(sf&&sf.finId===f.id){const{id:_,finId,...rest}=sf;await S.db.doc("schafe/"+sf.id).set({...rest,kaufpreis:null})}}
     closeSheet();toast("Gelöscht")}catch(x){fail(x)}});
   $("f").onsubmit=async ev=>{ev.preventDefault();const d=Object.fromEntries(new FormData(ev.target));for(const k in d)d[k]=String(d[k]).trim();
-    const b=parseBetrag(d.betrag);if(b===null){toast("Bitte gültigen Betrag eingeben");return}
+    const b=d.betrag?parseBetrag(d.betrag):null;if(d.betrag&&b===null){toast("Bitte gültigen Betrag eingeben");return}
+    if(b!==null&&/betrag fehlt/i.test(d.notiz||""))d.notiz=d.notiz.replace(/\s*betrag fehlt[^\n]*/i,"").trim();
     if(art==="ein"&&d.partner&&!kundeId&&$("kdadd")&&$("kdadd").checked){try{const r=await S.db.collection("kunden").add({name:d.partner,geaendert:new Date().toISOString()});kundeId=r.id}catch(x){}}
     const body={...d,art,kundeId:art==="ein"?kundeId:"",lammIds:art==="ein"?[...lsel]:[],betrag:b,nr:f.nr&&(f.datum||"").slice(0,4)===d.datum.slice(0,4)?f.nr:nextNr(d.datum.slice(0,4)),geaendert:new Date().toISOString()};
     if(f.schafId)body.schafId=f.schafId;
     try{if(neu)await S.db.collection("finanzen").add(body);else await S.db.doc("finanzen/"+f.id).set(body);
-      if(f.schafId){const sf=S.schafe.find(x=>x.id===f.schafId);if(sf&&Number(sf.kaufpreis)!==b){const{id:_,...rest}=sf;await S.db.doc("schafe/"+sf.id).set({...rest,kaufpreis:b,geaendert:new Date().toISOString()})}}
+      if(f.schafId){const sf=S.schafe.find(x=>x.id===f.schafId);if(sf&&b!==null&&Number(sf.kaufpreis)!==b){const{id:_,...rest}=sf;await S.db.doc("schafe/"+sf.id).set({...rest,kaufpreis:b,geaendert:new Date().toISOString()})}}
       if(setVk&&body.lammIds.length){for(const l of S.lamm){let ch=false;const ls=(l.laemmer||[]).map((y,i)=>{const id=y.id||l.id+"_"+i;if(body.lammIds.includes(id)&&(y.status||"lebend")==="lebend"){ch=true;return{...y,id,status:"verkauft"}}return{...y,id}});
         if(ch){const{id,...rest}=l;await S.db.doc("lammungen/"+l.id).set({...rest,laemmer:ls,geaendert:new Date().toISOString()})}}}
       S.fyear=d.datum.slice(0,4);closeSheet();toast("Gespeichert")}catch(x){fail(x)}};
@@ -591,7 +594,7 @@ function exportFinCSV(){const jahr=finJahr();
   const num=v=>v==null||v===""?"":Number(v).toFixed(2).replace(".",",");
   const priv=yl.filter(f=>f.art==="ein"&&f.kategorie==="Privateinlage").reduce((n,f)=>n+f.betrag,0),ein=yl.filter(f=>f.art==="ein").reduce((n,f)=>n+f.betrag,0)-priv,aus=yl.filter(f=>f.art==="aus").reduce((n,f)=>n+f.betrag,0);
   const rows=[["Jahresübersicht "+jahr],["Einnahmen",num(ein)],["Ausgaben",num(aus)],["Ergebnis",num(ein-aus)],["Privateinlage (nicht im Ergebnis)",num(priv)],[],["Lfd.Nr.","Datum","Beschreibung","Kategorie","Einnahme","Ausgabe","Begünstigter","Lämmer (Ohrmarken)","Notiz"]];
-  for(const f of yl)rows.push([f.nr,fmtD(f.datum),f.text,f.kategorie,f.art==="ein"?num(f.betrag):"",f.art==="aus"?num(f.betrag):"",f.partner,(f.lammIds||[]).map(id=>{const y=lammById(id);return y?(y.nr||"ohne Ohrmarke"):""}).join(", "),f.notiz]);
+  for(const f of yl)rows.push([f.nr,fmtD(f.datum),f.text,f.kategorie,f.art==="ein"&&!istOffen(f)?num(f.betrag):"",f.art==="aus"&&!istOffen(f)?num(f.betrag):"",f.partner,(f.lammIds||[]).map(id=>{const y=lammById(id);return y?(y.nr||"ohne Ohrmarke"):""}).join(", "),f.notiz]);
   download(`finanzen_${jahr}_${stamp()}.csv`,"﻿"+rows.map(r=>r.map(csvCell).join(";")).join("\r\n"),"text/csv")}
 
 /* ---------- Hilfen ---------- */
@@ -619,6 +622,8 @@ function homeHTML(){
   const kurzEur=n=>Math.round(n).toLocaleString("de-DE")+" €";
   // Heute wichtig
   const imp=[];
+  for(const f of S.fin.filter(istOffen).sort((a,b)=>(a.datum||"").localeCompare(b.datum||""))){const d=Math.round((new Date(today())-new Date(f.datum))/864e5);
+    imp.push({c:"y",i:"🧾",t:(f.art==="ein"?"Betrag fehlt: ":"Rechnung fehlt: ")+esc(f.text),s:[fmtD(f.datum),f.partner?esc(f.partner):"",d>=1?"seit "+d+(d===1?" Tag":" Tagen"):"heute erfasst"].filter(Boolean).join(" · "),a:`data-fin="${esc(f.id)}"`})}
   for(const x of S.beh.filter(b=>b.wartezeit&&b.wartezeit>=today()).sort((a,b)=>a.wartezeit.localeCompare(b.wartezeit))){const t=Math.round((new Date(x.wartezeit)-new Date(today()))/864e5);
     imp.push({c:"r",i:"💊",t:"Wartezeit "+esc(x.medikament),s:tierText(x)+" · "+(t===0?"endet heute":"noch "+t+(t===1?" Tag":" Tage")),r:"bis "+fmtD(x.wartezeit).slice(0,6),a:`data-b="${esc(x.id)}"`})}
   const unv=S.schafe.filter(s=>s.status!=="abgegangen"&&(!s.rasse||!s.zugang||!s.herkunft||!s.zuechter)).length;
@@ -645,7 +650,7 @@ function homeHTML(){
       <div><div class="kl">Gelammt ${jahr}</div><div class="kv" style="font-size:20px">${fertig} / ${akt.length}</div></div></div>
     <div class="kt" data-go="fin"><div class="kl">💶 Ergebnis ${jahr}</div><div class="kv" style="color:${erg>=0?"var(--acc)":"var(--danger)"}">${erg>=0?"+ ":"− "}${kurzEur(Math.abs(erg))}</div><div class="ks">${kurzEur(ein)} ein · ${kurzEur(aus)} aus</div></div>
   </div>
-  <div class="hsec">Heute wichtig</div>
+  <div class="hsec">Offene Aufgaben${imp.length?` · ${imp.length}`:""}</div>
   <div class="card" style="padding:0 12px">${imp.length?imp.map(x=>`<div class="imp" ${x.a||""}><span class="ii ii-${x.c}">${x.i}</span><div style="flex:1;min-width:0"><div style="font-weight:600">${x.t}</div><div class="ks">${x.s}</div></div>${x.r?`<span style="font-size:12px;color:var(--danger);font-weight:600;white-space:nowrap">${x.r}</span>`:`<span style="color:var(--mute)">›</span>`}</div>`).join(""):`<div class="imp"><span class="ii ii-g">✅</span><div>Alles erledigt – keine offenen Punkte.</div></div>`}</div>
   <div class="hsec">Schnell erfassen</div>
   <div class="qa">${S.db?`<button class="qb on" id="qaL"><span>🐣</span>Ablammung</button><button class="qb" id="qaB"><span>💊</span>Behandlung</button><button class="qb" id="qaT"><span>🧹</span>Stallbuch</button><button class="qb" id="qaF"><span>💶</span>Buchung</button>`:""}</div>
@@ -663,6 +668,7 @@ function bindHome(){
   const ha=$("hall");if(ha)ha.onclick=()=>{S.hall=!S.hall;render()};
   document.querySelectorAll("[data-id]").forEach(x=>x.onclick=()=>{S.sel=x.dataset.id;S.view="detail";render();scrollTo(0,0)});
   document.querySelectorAll("[data-b]").forEach(x=>x.onclick=()=>behForm(S.beh.find(y=>y.id===x.dataset.b)));
+  document.querySelectorAll(".imp[data-fin]").forEach(x=>x.onclick=()=>finForm(S.fin.find(y=>y.id===x.dataset.fin)));
   document.querySelectorAll("[data-go]").forEach(x=>x.onclick=()=>{const g=x.dataset.go;if(g==="unv"){S.tab="list";S.filter="unvollständig"}else S.tab=g;S.view="list";render();scrollTo(0,0)});
   const q=(id,f)=>{const e=$(id);if(e)e.onclick=f};
   q("qaL",()=>waehleMutter());q("qaB",()=>behForm());q("qaT",()=>tbForm());q("qaF",()=>finForm());
@@ -918,9 +924,10 @@ function feldForm(f){const neu=!f;f=f||{besitz:"Eigentum"};const n=neu?0:S.ernte
 }
 
 /* ---------- Versionsbuch ---------- */
-const APP_VERSION="1.16";
+const APP_VERSION="1.17";
 const ONLINE_URL="https://raw.githubusercontent.com/8p9754h2g7-dotcom/herdenbuch/main/index.html";
 const CHANGELOG=[
+ ["1.17","23.11.2026",["Buchungen ohne Betrag möglich (z. B. bestellt, Rechnung fehlt noch)","Startseite: „Offene Aufgaben“ statt „Heute wichtig“ – fehlende Rechnungsbeträge stehen ganz oben","Finanzen: Filter „Betrag offen“ und Kennzeichnung ⏳ in der Liste"]],
  ["1.16","23.11.2026",["Privateinlage zählt nicht mehr zu den Einnahmen und zum Ergebnis – wird separat angezeigt (wie in der Excel-Liste)","Einnahmen und Ausgaben 2026 aus der Excel-Liste übernommen (Importdatei)"]],
  ["1.15","23.11.2026",["Neu gestaltete Übersicht mit Begrüßung und vier Kennzahl-Kacheln","„Heute wichtig“: Wartezeiten, unvollständige Stammdaten, Lämmer ohne Ohrmarke, länger nicht erledigte Stallarbeiten","„Schnell erfassen“: Ablammung, Behandlung, Stallbuch und Buchung direkt von der Startseite","Grafik „Lämmer je Monat“","Kompakte Liste „Noch nicht gelammt“"]],
  ["1.14","23.11.2026",["Versionsbuch: Neuigkeiten jeder Version und Anzeige, welche Version online ist","Hinweis „Neu in dieser Version“ nach jedem Update","Knopf „Jetzt aktualisieren“, wenn online eine neuere Version liegt"]],
