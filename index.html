@@ -465,7 +465,7 @@ function finHTML(){
   const jahre=finJahre(),jahr=finJahr();S.ff=S.ff||"alle";
   const yl=S.fin.filter(f=>(f.datum||"").startsWith(jahr));
   const sum=a=>yl.filter(f=>f.art===a).reduce((n,f)=>n+(Number(f.betrag)||0),0);
-  const ein=sum("ein"),aus=sum("aus"),erg=ein-aus;
+  const priv=yl.filter(f=>f.art==="ein"&&f.kategorie==="Privateinlage").reduce((n,f)=>n+(Number(f.betrag)||0),0);const ein=sum("ein")-priv,aus=sum("aus"),erg=ein-aus;
   const kat=a=>{const g={};for(const f of yl.filter(x=>x.art===a))g[f.kategorie||"Ohne Kategorie"]=(g[f.kategorie||"Ohne Kategorie"]||0)+(Number(f.betrag)||0);return Object.entries(g).sort((x,y)=>y[1]-x[1])};
   const katList=(a,col)=>{const k=kat(a),mx=Math.max(1,...k.map(x=>x[1]));return k.length?k.map(([n,v])=>`<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:14px"><span>${esc(n)}</span><b>${eur(v)}</b></div><div style="height:6px;background:var(--chip);border-radius:3px"><div style="height:6px;width:${(v/mx*100).toFixed(1)}%;background:${col};border-radius:3px"></div></div></div>`).join(""):`<div style="color:var(--mute);font-size:14px">Keine Einträge.</div>`};
   const q=(S.fq||"").trim().toLowerCase();
@@ -479,6 +479,7 @@ function finHTML(){
   <div class="card" style="padding:4px 16px">
     <div class="finrow"><span>Einnahmen</span><b style="color:var(--acc)">${eur(ein)}</b></div>
     <div class="finrow"><span>Ausgaben</span><b style="color:var(--danger)">${eur(aus)}</b></div>
+    ${priv?`<div class="finrow" style="font-size:13px;color:var(--mute)"><span>Privateinlage (nicht im Ergebnis)</span><span>${eur(priv)}</span></div>`:""}
     <div class="finrow" style="border-bottom:0;font-size:18px"><span><b>Ergebnis</b></span><b style="color:${erg>=0?"var(--acc)":"var(--danger)"}">${eur(erg)}</b></div></div>
   <details class="card"><summary><b>Ausgaben nach Kategorie</b></summary>${katList("aus","var(--danger)")}</details>
   <details class="card"><summary><b>Einnahmen nach Kategorie</b></summary>${katList("ein","var(--acc)")}</details>
@@ -588,8 +589,8 @@ async function importFinCSV(file){
 function exportFinCSV(){const jahr=finJahr();
   const yl=S.fin.filter(f=>(f.datum||"").startsWith(jahr)).sort((a,b)=>(Number(a.nr)||0)-(Number(b.nr)||0)||(a.datum||"").localeCompare(b.datum||""));
   const num=v=>v==null||v===""?"":Number(v).toFixed(2).replace(".",",");
-  const ein=yl.filter(f=>f.art==="ein").reduce((n,f)=>n+f.betrag,0),aus=yl.filter(f=>f.art==="aus").reduce((n,f)=>n+f.betrag,0);
-  const rows=[["Jahresübersicht "+jahr],["Einnahmen",num(ein)],["Ausgaben",num(aus)],["Ergebnis",num(ein-aus)],[],["Lfd.Nr.","Datum","Beschreibung","Kategorie","Einnahme","Ausgabe","Begünstigter","Lämmer (Ohrmarken)","Notiz"]];
+  const priv=yl.filter(f=>f.art==="ein"&&f.kategorie==="Privateinlage").reduce((n,f)=>n+f.betrag,0),ein=yl.filter(f=>f.art==="ein").reduce((n,f)=>n+f.betrag,0)-priv,aus=yl.filter(f=>f.art==="aus").reduce((n,f)=>n+f.betrag,0);
+  const rows=[["Jahresübersicht "+jahr],["Einnahmen",num(ein)],["Ausgaben",num(aus)],["Ergebnis",num(ein-aus)],["Privateinlage (nicht im Ergebnis)",num(priv)],[],["Lfd.Nr.","Datum","Beschreibung","Kategorie","Einnahme","Ausgabe","Begünstigter","Lämmer (Ohrmarken)","Notiz"]];
   for(const f of yl)rows.push([f.nr,fmtD(f.datum),f.text,f.kategorie,f.art==="ein"?num(f.betrag):"",f.art==="aus"?num(f.betrag):"",f.partner,(f.lammIds||[]).map(id=>{const y=lammById(id);return y?(y.nr||"ohne Ohrmarke"):""}).join(", "),f.notiz]);
   download(`finanzen_${jahr}_${stamp()}.csv`,"﻿"+rows.map(r=>r.map(csvCell).join(";")).join("\r\n"),"text/csv")}
 
@@ -614,7 +615,7 @@ function homeHTML(){
   const gelammt=new Set(lj.map(l=>l.schafId));
   const offen=akt.filter(s=>!gelammt.has(s.id)),fertig=akt.length-offen.length,pct=akt.length?Math.round(fertig/akt.length*100):0;
   const leb=alleLaemmer().filter(y=>y.status==="lebend"),lw=leb.filter(y=>y.sex==="w").length,lm=leb.filter(y=>y.sex==="m").length;
-  const fy=S.fin.filter(f=>(f.datum||"").startsWith(jahr)),ein=fy.filter(f=>f.art==="ein").reduce((a,f)=>a+(Number(f.betrag)||0),0),aus=fy.filter(f=>f.art==="aus").reduce((a,f)=>a+(Number(f.betrag)||0),0),erg=ein-aus;
+  const fy=S.fin.filter(f=>(f.datum||"").startsWith(jahr)),ein=fy.filter(f=>f.art==="ein"&&f.kategorie!=="Privateinlage").reduce((a,f)=>a+(Number(f.betrag)||0),0),aus=fy.filter(f=>f.art==="aus").reduce((a,f)=>a+(Number(f.betrag)||0),0),erg=ein-aus;
   const kurzEur=n=>Math.round(n).toLocaleString("de-DE")+" €";
   // Heute wichtig
   const imp=[];
@@ -917,9 +918,10 @@ function feldForm(f){const neu=!f;f=f||{besitz:"Eigentum"};const n=neu?0:S.ernte
 }
 
 /* ---------- Versionsbuch ---------- */
-const APP_VERSION="1.15";
+const APP_VERSION="1.16";
 const ONLINE_URL="https://raw.githubusercontent.com/8p9754h2g7-dotcom/herdenbuch/main/index.html";
 const CHANGELOG=[
+ ["1.16","23.11.2026",["Privateinlage zählt nicht mehr zu den Einnahmen und zum Ergebnis – wird separat angezeigt (wie in der Excel-Liste)","Einnahmen und Ausgaben 2026 aus der Excel-Liste übernommen (Importdatei)"]],
  ["1.15","23.11.2026",["Neu gestaltete Übersicht mit Begrüßung und vier Kennzahl-Kacheln","„Heute wichtig“: Wartezeiten, unvollständige Stammdaten, Lämmer ohne Ohrmarke, länger nicht erledigte Stallarbeiten","„Schnell erfassen“: Ablammung, Behandlung, Stallbuch und Buchung direkt von der Startseite","Grafik „Lämmer je Monat“","Kompakte Liste „Noch nicht gelammt“"]],
  ["1.14","23.11.2026",["Versionsbuch: Neuigkeiten jeder Version und Anzeige, welche Version online ist","Hinweis „Neu in dieser Version“ nach jedem Update","Knopf „Jetzt aktualisieren“, wenn online eine neuere Version liegt"]],
  ["1.13","23.11.2026",["Neuer Bereich 🌾 Ernte: Schnitte mit Feld, Beginn, Ende, Ballen und Art","Felderverzeichnis mit Größe (ha), Flurnummer, Eigentum/Pacht","Vergleich je Feld und je Jahr, Ballen je ha, Excel-Export","Finanz-Kategorie „Ernte & Lohnarbeit“"]],
