@@ -162,6 +162,10 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--acc);outline-off
 <script>
 const RASSEN=["Weißes Bergschaf","Coburger Fuchs","Charollais","Jura","Kreuzung","Sonstige"];
 const isBock=s=>s&&s.typ==="Bock";
+function alterTier(s,lang){if(s.geb)return alter(s.geb);if(s.zugang){const a=alter(s.zugang);return a?(lang?`mind. ${a} (ab Zugang gerechnet)`:`mind. ${a}`):""}return""}
+const bockLabel=x=>x.name?`${x.name} (${x.nr})`:x.nr;
+function defaultBock(){const bs=S.schafe.filter(x=>isBock(x)&&x.status!=="abgegangen");if(!bs.length)return"";if(bs.length===1)return bs[0].name||bs[0].nr;
+  const last=S.lamm.slice().sort((a,b)=>(b.datum||"").localeCompare(a.datum||"")).find(l=>l.bock);return last?last.bock:(bs[0].name||bs[0].nr)}
 const istMutter=s=>s&&s.typ!=="Bock"&&s.status!=="abgegangen";
 const S={kunden:[],med:[],fin:[],tab:"home",beh:[],tb:[],db:null,schafe:[],lamm:[],loaded:{s:false,l:false},err:null,view:"list",sel:null,q:"",filter:"alle",readonly:false};
 const $=id=>document.getElementById(id);
@@ -231,8 +235,8 @@ function eweCard(s){
   return `<div class="card ewe" data-id="${esc(s.id)}">
     <div class="tag ${s.rasse==="Coburger Fuchs"?"fuchs":""}">${esc(kurzNr(s.nr))}</div>
     <div class="info">
-      <div class="name">${esc(s.nr||"?")} ${isBock(s)?'<span class="badge" style="background:#3d5a80;color:#fff">♂ Bock</span>':""}${!s.rasse||!s.zugang||!s.herkunft||!s.zuechter?'<span class="badge" style="background:#f6efd6;color:#6b5a2a">⚠ unvollständig</span>':""} ${s.status==="abgegangen"?'<span class="badge">abgegangen</span>':""}</div>
-      <div class="sub">${esc(s.rasse||"")}${s.geb?" · "+alter(s.geb):""} · ${l.length} Ablamm. / ${n} Lämmer</div>
+      <div class="name">${esc(s.nr||"?")}${s.name&&isBock(s)?` · <b>${esc(s.name)}</b>`:""} ${isBock(s)?'<span class="badge" style="background:#3d5a80;color:#fff">♂ Bock</span>':""}${!s.rasse||!s.zugang||!s.herkunft||!s.zuechter?'<span class="badge" style="background:#f6efd6;color:#6b5a2a">⚠ unvollständig</span>':""} ${s.status==="abgegangen"?'<span class="badge">abgegangen</span>':""}</div>
+      <div class="sub">${esc(s.rasse||"")}${alterTier(s)?" · "+alterTier(s):""} · ${l.length} Ablamm. / ${n} Lämmer</div>
       ${s.auff?`<div class="warn">⚠ ${esc(s.auff)}</div>`:""}
       ${(()=>{const b=behFor(s.id)[0];return b?`<div class="med">💊 ${fmtD(b.datum)} · ${esc(b.medikament)} ${wzBadge(b)}</div>`:""})()}
     </div></div>`;
@@ -252,7 +256,7 @@ function detailHTML(){
     document.querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>lammForm(s,S.lamm.find(x=>x.id===b.dataset.l)));
   });
   return `<header><button class="back" id="bk">‹ Zurück</button>
-    <h1 style="margin:8px 0 0">${esc(s.nr||"?")}</h1></header>
+    <h1 style="margin:8px 0 0">${isBock(s)&&s.name?esc(s.name)+" · ":""}${esc(s.nr||"?")}</h1></header>
   <main>
     <div class="stats">
       <div class="stat"><b>${l.length}</b><span>Ablamm.</span></div>
@@ -266,8 +270,10 @@ function detailHTML(){
     <div class="card"><dl>
       <dt>Ohrmarke</dt><dd>${esc(s.nr||"–")}</dd>
       <dt>Typ</dt><dd>${isBock(s)?"Bock":"Mutterschaf"}</dd>
+      ${isBock(s)?`<dt>Name</dt><dd>${esc(s.name||"–")}</dd>`:""}
       <dt>Rasse</dt><dd>${esc(s.rasse||"–")}</dd>
       <dt>Geboren</dt><dd>${fmtD(s.geb)}${s.geb?` (${alter(s.geb)})`:""}</dd>
+      ${!s.geb&&s.zugang?`<dt>Alter</dt><dd>${alterTier(s,true)}</dd>`:""}
       <dt>Herkunft</dt><dd>${esc(s.herkunft||"–")}</dd>
       <dt>Züchter</dt><dd>${esc(s.zuechter||"–")}</dd>
       <dt>Zugang am</dt><dd>${fmtD(s.zugang)}</dd>
@@ -365,11 +371,13 @@ function lmHTML(){
   const alle=jahr==="alle"?roh:roh.filter(y=>(y.datum||"").startsWith(jahr));
   const cnt=g=>alle.filter(y=>statGrp(y.status)===g).length;
   const grp=alle.filter(y=>statGrp(y.status)===S.lms);
-  const list=grp.filter(y=>S.lmf==="alle"||y.sex===S.lmf);
+  const lq=(S.lq||"").trim().toLowerCase().replace(/\s+/g,"");
+  const list=grp.filter(y=>(S.lmf==="alle"||y.sex===S.lmf)&&(!lq||[y.nr,y.mutter&&y.mutter.nr,y.bock].join(" ").toLowerCase().replace(/\s+/g,"").includes(lq)));
   const w=grp.filter(y=>y.sex==="w").length,m=grp.filter(y=>y.sex==="m").length;
   const badge=st=>{const c=st==="lebend"?"#3f7a2e":st==="verkauft"?"#b8862f":"#b23b2b";return `<span style="display:inline-block;background:${c};color:#fff;font-size:12px;font-weight:700;border-radius:6px;padding:2px 8px;margin-right:6px;vertical-align:2px">${esc(st.charAt(0).toUpperCase()+st.slice(1))}</span>`};
   const leer={lebend:"Keine lebenden Lämmer erfasst.<br>Lämmer trägst du beim Mutterschaf unter „+ Ablammung“ ein.",verkauft:"Noch keine verkauften Lämmer.",tot:"Keine verendeten oder tot geborenen Lämmer."}[S.lms];
   return `<header><h1>🐣 Lämmer <small>${cnt("lebend")} lebend${jahr==="alle"?"":" · Jg. "+jahr}</small><button class="btn sec sm" id="dm">💾</button></h1>
+    <input id="lq" type="search" placeholder="Suche: Lammnummer oder Mutterschaf …" value="${esc(S.lq||"")}">
     <div class="seg lmseg">${Object.entries(LSTAT).map(([k,[t]])=>`<button class="chip ${S.lms===k?"on":""}" data-ls="${k}">${t} (${cnt(k)})</button>`).join("")}</div>
     <div class="chips">${[["alle",`Alle (${grp.length})`],["w",`♀ weiblich (${w})`],["m",`♂ männlich (${m})`]].map(([k,t])=>`<button class="chip ${S.lmf===k?"on":""}" data-lf="${k}">${t}</button>`).join("")}</div></header><main>
   <div class="yearbar"><span>📅 Geburtsjahrgang</span><select id="lyr"><option value="alle" ${jahr==="alle"?"selected":""}>Alle Jahre</option>${jahre.map(y=>`<option ${y===jahr?"selected":""}>${y}</option>`).join("")}</select></div>
@@ -378,10 +386,10 @@ function lmHTML(){
     <div class="info"><div class="name">${badge(y.status)}${y.nr?esc(y.nr):"ohne Ohrmarke"} <span style="font-weight:400;color:var(--mute)">· ${y.sex==="m"?"männlich":y.sex==="w"?"weiblich":"Geschlecht offen"}</span></div>
     <div class="sub">${y.status==="lebend"?`<b style="color:var(--ink)">${lammAlter(y.datum)}</b> · `:""}geb. ${fmtD(y.datum)}${y.gewicht?" · "+esc(y.gewicht)+" kg":""}</div>
     <div class="sub">Mutter: ${y.mutter?esc(y.mutter.nr+(y.mutter.name?" "+y.mutter.name:"")):"(gelöscht)"}${y.bock?" · Vater: "+esc(y.bock):""}</div>
-    ${y.bem?`<div class="med">${esc(y.bem)}</div>`:""}${(()=>{const bh=lammBehFor(y.id)[0];return bh?`<div class="med">💊 ${fmtD(bh.datum)} · ${esc(bh.medikament)} ${wzBadge(bh)}</div>`:""})()}${em[y.id]?`<div class="med" style="color:var(--acc);font-weight:600">💶 Erlös ${eur(em[y.id].sum)} (${fmtD(em[y.id].fins[0].datum)})</div>`:""}</div></div>`).join(""):`<div class="empty">${grp.length?"Keine Treffer.":leer}</div>`}
+    ${y.bem?`<div class="med">${esc(y.bem)}</div>`:""}${(()=>{const bh=lammBehFor(y.id)[0];return bh?`<div class="med">💊 ${fmtD(bh.datum)} · ${esc(bh.medikament)} ${wzBadge(bh)}</div>`:""})()}${em[y.id]?`<div class="med" style="color:var(--acc);font-weight:600">💶 Erlös ${eur(em[y.id].sum)} (${fmtD(em[y.id].fins[0].datum)})</div>`:""}</div></div>`).join(""):`<div class="empty">${grp.length?"Keine Treffer"+(lq?" für „"+esc(S.lq)+"“":"")+".":leer}</div>`}
   ${S.lms==="lebend"?`<div class="note">Tipp: Antippen öffnet die Ablammung – dort kannst du den Status z. B. auf „verkauft“ ändern, dann wandert das Lamm in den Reiter „Verkauft“.</div>`:""}
   </main>`}
-function bindLm(){const ly=$("lyr");if(ly)ly.onchange=()=>{S.lyear=ly.value;render()};
+function bindLm(){const lqi=$("lq");if(lqi)lqi.oninput=()=>{S.lq=lqi.value;const p=lqi.selectionStart;render();const n=$("lq");n.focus();n.setSelectionRange(p,p)};const ly=$("lyr");if(ly)ly.onchange=()=>{S.lyear=ly.value;render()};
   document.querySelectorAll("[data-ls]").forEach(b=>b.onclick=()=>{S.lms=b.dataset.ls;S.lmf="alle";render()});
   document.querySelectorAll("[data-lf]").forEach(b=>b.onclick=()=>{S.lmf=b.dataset.lf;render()});
   document.querySelectorAll("[data-lm]").forEach(b=>b.onclick=()=>{const l=S.lamm.find(x=>x.id===b.dataset.lm);const m=l&&S.schafe.find(x=>x.id===l.schafId);if(l&&m&&S.db)lammForm(m,l)});
@@ -597,7 +605,7 @@ function homeHTML(){
     <div class="stats" style="margin-bottom:0"><div class="stat"><b>${lam.length}</b><span>Lämmer</span></div><div class="stat"><b>${st("lebend")}</b><span>lebend</span></div><div class="stat"><b>${st("verkauft")}</b><span>verkauft</span></div><div class="stat"><b>${st("tot")}</b><span>verendet</span></div></div>
   </div>
   <h2>⏳ Noch nicht gelammt <span style="font-size:14px;color:var(--mute);font-family:inherit">${offen.length}</span></h2>
-  ${offen.length?offen.map(s=>{const l=lammFor(s.id)[0];return `<div class="card ewe" data-id="${esc(s.id)}"><div class="tag ${s.rasse==="Coburger Fuchs"?"fuchs":""}">${esc(kurzNr(s.nr))}</div><div class="info"><div class="name">${esc(s.nr)}</div><div class="sub">${esc(s.rasse||"")}${s.geb?" · "+alter(s.geb):""}</div><div class="med">${l?"zuletzt gelammt: "+fmtD(l.datum):"noch nie gelammt"}${s.zugang&&s.zugang.startsWith(jahr)?" · Zugang "+fmtD(s.zugang):""}</div>${s.auff?`<div class="warn">⚠ ${esc(s.auff)}</div>`:""}</div></div>`}).join(""):`<div class="empty">${akt.length?"🎉 Alle Mutterschafe haben "+jahr+" gelammt.":"Noch keine Mutterschafe erfasst."}</div>`}
+  ${offen.length?offen.map(s=>{const l=lammFor(s.id)[0];return `<div class="card ewe" data-id="${esc(s.id)}"><div class="tag ${s.rasse==="Coburger Fuchs"?"fuchs":""}">${esc(kurzNr(s.nr))}</div><div class="info"><div class="name">${esc(s.nr)}</div><div class="sub">${esc(s.rasse||"")}${alterTier(s)?" · "+alterTier(s):""}</div><div class="med">${l?"zuletzt gelammt: "+fmtD(l.datum):"noch nie gelammt"}${s.zugang&&s.zugang.startsWith(jahr)?" · Zugang "+fmtD(s.zugang):""}</div>${s.auff?`<div class="warn">⚠ ${esc(s.auff)}</div>`:""}</div></div>`}).join(""):`<div class="empty">${akt.length?"🎉 Alle Mutterschafe haben "+jahr+" gelammt.":"Noch keine Mutterschafe erfasst."}</div>`}
   <h2>💊 Laufende Wartezeiten <span style="font-size:14px;color:var(--mute);font-family:inherit">${wz.length}</span></h2>
   ${wz.length?`<div class="card">${wz.map(x=>`<div class="lamb" data-b="${esc(x.id)}" style="cursor:pointer"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(x.medikament)}</b><span class="wz">bis ${fmtD(x.wartezeit)}</span></div><div style="color:var(--mute);font-size:13px">${tierText(x)} · noch ${Math.round((new Date(x.wartezeit)-new Date(today()))/864e5)} Tage</div></div>`).join("")}</div>`:`<div class="empty" style="padding:16px">Keine laufenden Wartezeiten.</div>`}
   <h2>💶 Finanzen ${jahr}</h2>
@@ -748,6 +756,7 @@ function eweForm(s){
     <label>Züchter *</label><input name="zuechter" required value="${esc(s.zuechter)}">
     <label>Kaufpreis (€)</label><input name="kaufpreis" inputmode="decimal" placeholder="leer lassen bei eigener Nachzucht" value="${s.kaufpreis!=null&&s.kaufpreis!==""?String(s.kaufpreis).replace(".",","):""}">
     <div style="color:var(--mute);font-size:12px;margin-top:4px">💶 Wird automatisch als Ausgabe „Nachzucht“ bei den Finanzen gebucht${s.finId&&S.fin.some(x=>x.id===s.finId)?" (bereits verknüpft – Änderungen werden übernommen)":""}.</div>
+    <div id="bnbox" style="${isBock(s)?"":"display:none"}"><label>Name des Bocks</label><input name="name" value="${esc(isBock(s)?s.name:"")}" placeholder="z. B. Felix"></div>
     <label>Vater (Bock)</label><input name="vater" value="${esc(s.vater)}">
     <label>Auffälligkeiten (Klauen, Euter, Lahmheit, Charakter …)</label><textarea name="auff">${esc(s.auff)}</textarea>
     <label>Notizen</label><textarea name="notiz">${esc(s.notiz)}</textarea>
@@ -756,7 +765,7 @@ function eweForm(s){
     <div><label>Abgangsgrund</label><input name="abgangGrund" value="${esc(s.abgangGrund)}" placeholder="verkauft, verendet …"></div></div>
     <div class="acts">${s.id?`<button type="button" class="btn del" id="del">Löschen</button>`:""}<button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div>
   </form>`);
-  $("cx").onclick=closeSheet;
+  document.querySelectorAll("[name=typ]").forEach(r=>r.onchange=()=>{$("bnbox").style.display=document.querySelector("[name=typ]:checked").value==="Bock"?"":"none"});$("cx").onclick=closeSheet;
   if(s.id)armDelete($("del"),async()=>{
     try{for(const l of lammFor(s.id))await S.db.doc("lammungen/"+l.id).delete();await S.db.doc("schafe/"+s.id).delete();closeSheet();S.view="list";render();toast("Gelöscht")}catch(e){fail(e)}});
   $("f").onsubmit=async e=>{
@@ -766,7 +775,7 @@ function eweForm(s){
     if(d.kaufpreis&&kp===null){toast("Bitte gültigen Kaufpreis eingeben");return}
     d.kaufpreis=kp;d.geaendert=new Date().toISOString();
     try{
-      const keep={};for(const k of ["angelegt","finId","name","mutter"])if(s[k]!=null)keep[k]=s[k];
+      const keep={};for(const k of ["angelegt","finId","mutter"])if(s[k]!=null)keep[k]=s[k];if(d.typ!=="Bock")delete d.name;
       let id=s.id;
       if(id)await S.db.doc("schafe/"+id).set({...keep,...d,angelegt:s.angelegt||d.geaendert});
       else{d.angelegt=d.geaendert;const r=await S.db.collection("schafe").add(d);id=r.id;S.sel=id;S.view="detail"}
@@ -785,7 +794,7 @@ function eweForm(s){
 }
 
 function lammForm(s,l){
-  l=l||{datum:new Date().toISOString().slice(0,10),laemmer:[{sex:"",status:"lebend"}],verlauf:"leicht"};
+  l=l||{datum:new Date().toISOString().slice(0,10),laemmer:[{sex:"",status:"lebend"}],verlauf:"leicht",bock:defaultBock()};
   let lambs=(l.laemmer||[]).map(x=>({...x}));
   const draw=()=>{
     $("lb").innerHTML=lambs.map((y,i)=>`<div class="lambbox">
@@ -806,7 +815,7 @@ function lammForm(s,l){
   <div style="color:var(--mute)">${esc(s.nr)} ${esc(s.name||"")}</div>
   <form id="f">
     <div class="row"><div><label>Datum *</label><input type="date" name="datum" required value="${esc(l.datum)}"></div>
-    <div><label>Deckbock</label><input name="bock" list="bkl" value="${esc(l.bock)}" placeholder="Bock wählen"><datalist id="bkl">${S.schafe.filter(x=>isBock(x)&&x.status!=="abgegangen").map(x=>`<option value="${esc(x.nr)}">${esc(x.rasse||"")}</option>`).join("")}</datalist></div></div>
+    <div><label>Deckbock</label><input name="bock" list="bkl" value="${esc(l.bock)}" placeholder="Bock wählen"><datalist id="bkl">${S.schafe.filter(x=>isBock(x)&&x.status!=="abgegangen").map(x=>`<option value="${esc(x.name||x.nr)}">${esc(x.name?x.nr+" · ":"")}${esc(x.rasse||"")}</option>`).join("")}</datalist></div></div>
     <label>Geburtsverlauf</label><select name="verlauf">${["leicht","mit Hilfe","schwer","Tierarzt"].map(o=>`<option ${l.verlauf===o?"selected":""}>${o}</option>`).join("")}</select>
     <div id="lb"></div>
     <button type="button" class="btn sec" id="addl" style="width:100%;margin-top:10px">+ weiteres Lamm</button>
@@ -841,7 +850,8 @@ let store;
 function loadStore(){try{const o=JSON.parse(localStorage.getItem(KEY));if(o&&o.schafe&&o.lammungen){o.behandlungen=o.behandlungen||{};o.finanzen=o.finanzen||{};o.kunden=o.kunden||{};o.medikamente=o.medikamente||{};o.stallbuch=o.stallbuch||{};o.meta=o.meta||{};o.betrieb=o.betrieb||{...BETRIEB_START};return o}}catch(e){}return{schafe:{},lammungen:{},finanzen:{},kunden:{},medikamente:{},behandlungen:{},stallbuch:{},meta:{},betrieb:{...BETRIEB_START}}}
 function saveStore(){store.meta=store.meta||{};store.meta.geaendert=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(store));if(typeof syncPush==="function")syncPush()}
 function ensureLambIds(o){for(const[lid,l]of Object.entries(o.lammungen||{}))(l.laemmer||[]).forEach((y,i)=>{if(!y.id)y.id=lid+"_"+i})}
-function refresh(){ensureLambIds(store);S.schafe=Object.entries(store.schafe).map(([id,d])=>({...d,id}));S.lamm=Object.entries(store.lammungen).map(([id,d])=>({...d,id}));S.beh=Object.entries(store.behandlungen).map(([id,d])=>({...d,id}));S.tb=Object.entries(store.stallbuch).map(([id,d])=>({...d,id}));S.fin=Object.entries(store.finanzen).map(([id,d])=>({...d,id}));S.kunden=Object.entries(store.kunden).map(([id,d])=>({...d,id}));S.med=Object.entries(store.medikamente).map(([id,d])=>({...d,id}));render()}
+function migrateFelix(){const e=Object.entries(store.schafe||{}).find(([id,x])=>x.nr==="DE010801065313"&&x.typ==="Bock"&&!x.name);if(e&&!localStorage.getItem("herdenbuch-felix")){e[1].name="Felix";e[1].geaendert=new Date().toISOString();try{localStorage.setItem("herdenbuch-felix","1")}catch(x){}saveStore()}}
+function refresh(){ensureLambIds(store);migrateFelix();S.schafe=Object.entries(store.schafe).map(([id,d])=>({...d,id}));S.lamm=Object.entries(store.lammungen).map(([id,d])=>({...d,id}));S.beh=Object.entries(store.behandlungen).map(([id,d])=>({...d,id}));S.tb=Object.entries(store.stallbuch).map(([id,d])=>({...d,id}));S.fin=Object.entries(store.finanzen).map(([id,d])=>({...d,id}));S.kunden=Object.entries(store.kunden).map(([id,d])=>({...d,id}));S.med=Object.entries(store.medikamente).map(([id,d])=>({...d,id}));render()}
 const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const localDb={
   doc(path){const[c,id]=path.split("/");return{
@@ -866,7 +876,7 @@ function exportBestandCSV(){
   const akt=S.schafe.filter(x=>x.status!=="abgegangen").sort((a,b)=>String(a.nr||"").localeCompare(String(b.nr||""),"de",{numeric:true}));
   const rows=[["Ohrmarkennr.","Typ","Rasse","Geburtsdatum","Alter","Herkunft","Züchter","Zugang am","Kaufpreis","Vater","Auffälligkeiten","Notizen","Ablammungen","Lämmer gesamt","Lämmer verkauft (zugeordnet)","Erlöse Lämmer gesamt","Letzte Ablammung","Letzte Behandlung","Medikament"]];
   for(const x of akt){const l=lammFor(x.id),b=behFor(x.id)[0];
-    const er=erloesSchaf(x.id);rows.push([x.nr,isBock(x)?"Bock":"Mutterschaf",x.rasse,fmtD(x.geb),alter(x.geb),x.herkunft,x.zuechter,fmtD(x.zugang),Number(x.kaufpreis)>0?Number(x.kaufpreis).toFixed(2).replace(".",","):"",x.vater,x.auff,x.notiz,l.length,l.reduce((n,y)=>n+(y.laemmer||[]).length,0),er.n,er.sum?er.sum.toFixed(2).replace(".",","):"",l[0]?fmtD(l[0].datum):"",b?fmtD(b.datum):"",b?b.medikament:""].map(v=>v==="–"?"":v))}
+    const er=erloesSchaf(x.id);rows.push([x.nr,isBock(x)?"Bock":"Mutterschaf",x.rasse,fmtD(x.geb),alterTier(x),x.herkunft,x.zuechter,fmtD(x.zugang),Number(x.kaufpreis)>0?Number(x.kaufpreis).toFixed(2).replace(".",","):"",x.vater,x.auff,x.notiz,l.length,l.reduce((n,y)=>n+(y.laemmer||[]).length,0),er.n,er.sum?er.sum.toFixed(2).replace(".",","):"",l[0]?fmtD(l[0].datum):"",b?fmtD(b.datum):"",b?b.medikament:""].map(v=>v==="–"?"":v))}
   download(`mutterschaf_bestand_${stamp()}.csv`,"\ufeff"+rows.map(r=>r.map(csvCell).join(";")).join("\r\n"),"text/csv");toast(`${akt.length} Mutterschafe exportiert`)}
 function exportBehCSV(){
   const rows=[["Datum","Medikament","Grund","Dosis","Wartezeit bis","Behandelt von","Charge/Beleg","Alle Tiere","Ohrmarke","Name","Notiz"]];
