@@ -105,6 +105,23 @@ details.card summary::after{content:"▾";color:var(--mute)}details[open].card s
 .ckleer{color:var(--mute);font-size:13px;padding:6px 4px 10px}
 header h1{flex-wrap:wrap}
 .ftab.ernte td{font-size:14px}.ftab.ernte tr[data-e]{cursor:pointer}
+.kpi{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
+.kt{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;box-shadow:0 1px 3px rgba(40,70,30,.08);cursor:pointer;min-width:0}
+.kl{font-size:12px;color:var(--mute);font-weight:600}.kv{font-size:26px;font-weight:700;line-height:1.15;font-family:"Rockwell","Roboto Slab","Georgia",serif}
+.ks{font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hsec{font-size:14px;font-weight:700;color:var(--acc-d);margin:18px 2px 8px}
+@media (prefers-color-scheme:dark){.hsec{color:var(--acc)}}
+.imp{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}.imp:last-child{border-bottom:0}
+.ii{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none;font-size:16px}
+.ii-r{background:#fcebeb}.ii-y{background:#faeeda}.ii-g{background:#eaf3de}
+@media (prefers-color-scheme:dark){.ii-r{background:#4a2222}.ii-y{background:#4a3d1e}.ii-g{background:#24361b}}
+.qa{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.qb{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 2px;font:inherit;font-size:12px;font-weight:600;color:var(--ink);cursor:pointer}
+.qb span{display:block;font-size:22px;margin-bottom:2px}.qb.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.hsel{width:auto;padding:4px 28px 4px 10px;font-size:14px;font-weight:700;border-radius:999px;border:1.5px solid var(--acc);color:var(--acc-d)}
+.hpill{display:inline-block;background:rgba(255,255,255,.14);border-radius:999px;padding:3px 10px;cursor:pointer}.hpill #syncdot{color:#e3f0da!important}
+.card.ewe.cmp{padding:9px 12px;margin-bottom:8px}.card.ewe.cmp .tag{min-width:50px;height:50px;font-size:14px}
+.card.ewe.cmp .name{font-size:15px}.card.ewe.cmp .sub{font-size:13px}
 /* ===== Design: Grünland ===== */
 :root{
   --bg:#eef3e6;--card:#ffffff;--ink:#1f2d1a;--mute:#5f6f55;--line:#d5e0c8;
@@ -592,36 +609,71 @@ function homeHTML(){
   const jahre=[...new Set([cur,...S.lamm.map(l=>(l.datum||"").slice(0,4)).filter(y=>/^\d{4}$/.test(y))])].sort().reverse();
   const jahr=jahre.includes(S.hyear)?S.hyear:cur;
   const akt=S.schafe.filter(istMutter).sort((a,b)=>String(a.nr||"").localeCompare(String(b.nr||""),"de",{numeric:true}));
+  const boecke=S.schafe.filter(s=>isBock(s)&&s.status!=="abgegangen");
   const lj=S.lamm.filter(l=>(l.datum||"").startsWith(jahr));
   const gelammt=new Set(lj.map(l=>l.schafId));
   const offen=akt.filter(s=>!gelammt.has(s.id)),fertig=akt.length-offen.length,pct=akt.length?Math.round(fertig/akt.length*100):0;
-  const lam=lj.flatMap(l=>l.laemmer||[]),st=g=>lam.filter(y=>statGrp(y.status||"lebend")===g).length;
-  const wz=S.beh.filter(b=>b.wartezeit&&b.wartezeit>=today()).sort((a,b)=>a.wartezeit.localeCompare(b.wartezeit));
-  const fy=S.fin.filter(f=>(f.datum||"").startsWith(jahr)),ein=fy.filter(f=>f.art==="ein").reduce((a,f)=>a+f.betrag,0),aus=fy.filter(f=>f.art==="aus").reduce((a,f)=>a+f.betrag,0);
+  const leb=alleLaemmer().filter(y=>y.status==="lebend"),lw=leb.filter(y=>y.sex==="w").length,lm=leb.filter(y=>y.sex==="m").length;
+  const fy=S.fin.filter(f=>(f.datum||"").startsWith(jahr)),ein=fy.filter(f=>f.art==="ein").reduce((a,f)=>a+(Number(f.betrag)||0),0),aus=fy.filter(f=>f.art==="aus").reduce((a,f)=>a+(Number(f.betrag)||0),0),erg=ein-aus;
+  const kurzEur=n=>Math.round(n).toLocaleString("de-DE")+" €";
+  // Heute wichtig
+  const imp=[];
+  for(const x of S.beh.filter(b=>b.wartezeit&&b.wartezeit>=today()).sort((a,b)=>a.wartezeit.localeCompare(b.wartezeit))){const t=Math.round((new Date(x.wartezeit)-new Date(today()))/864e5);
+    imp.push({c:"r",i:"💊",t:"Wartezeit "+esc(x.medikament),s:tierText(x)+" · "+(t===0?"endet heute":"noch "+t+(t===1?" Tag":" Tage")),r:"bis "+fmtD(x.wartezeit).slice(0,6),a:`data-b="${esc(x.id)}"`})}
+  const unv=S.schafe.filter(s=>s.status!=="abgegangen"&&(!s.rasse||!s.zugang||!s.herkunft||!s.zuechter)).length;
+  if(unv)imp.push({c:"y",i:"⚠️",t:"Stammdaten unvollständig",s:`${unv} ${unv===1?"Tier":"Tiere"} – Angaben ergänzen`,a:'data-go="unv"'});
+  const ohneNr=leb.filter(y=>!y.nr).length;if(ohneNr)imp.push({c:"y",i:"🏷️",t:"Lämmer ohne Ohrmarke",s:`${ohneNr} lebende${ohneNr===1?"s Lamm":" Lämmer"}`,a:'data-go="lm"'});
   const tbl={};for(const e of S.tb.slice().sort((a,b)=>(b.datum||"").localeCompare(a.datum||""))){const k=(e.taetigkeit||"").trim().toLowerCase();if(k&&!tbl[k])tbl[k]=e}
-  const b=(store&&store.betrieb)||{};
-  return `<header><h1>🏠 Übersicht <small>${b.inhaber?esc(b.inhaber):""}</small><button class="btn sec sm" id="bt">🏡</button><button class="btn sec sm" id="dm">💾</button></h1><div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px"><div id="synclink" style="cursor:pointer">${syncBadge()}</div><span id="verlink" style="cursor:pointer;font-size:12px;color:rgba(255,255,255,.8)">ℹ️ Version ${APP_VERSION}</span></div></header><main>
+  for(const e of Object.values(tbl).sort((a,b)=>(a.datum||"").localeCompare(b.datum||"")).slice(0,2)){const d=Math.round((new Date(today())-new Date(e.datum))/864e5);if(d>=7)imp.push({c:"g",i:"🧹",t:esc(e.taetigkeit),s:"zuletzt "+vor(e.datum),a:'data-go="tb"'})}
+  // Lämmer je Monat
+  const mon=Array(12).fill(0);for(const l of lj){const m=Number((l.datum||"").slice(5,7))-1;if(m>=0)mon[m]+=(l.laemmer||[]).length}
+  const mx=Math.max(1,...mon),hi=mon.filter(v=>v).sort((a,b)=>b-a)[1]||mx;
+  const b=(store&&store.betrieb)||{},vn=(b.inhaber||"").trim().split(/\s+/)[0];
+  const h=new Date().getHours(),gruss=h<11?"Guten Morgen":h<18?"Guten Tag":"Guten Abend";
+  const datum=new Date().toLocaleDateString("de-DE",{weekday:"long",day:"numeric",month:"long"});
+  const zeig=S.hall?offen:offen.slice(0,8);
+  return `<header class="hhead"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+    <div><div style="font-size:13px;color:#cfe3c3">${esc(datum)}</div><h1 style="margin:2px 0 0;font-size:22px">${gruss}${vn?", "+esc(vn):""}</h1></div>
+    <div style="display:flex;gap:6px"><button class="btn sec sm" id="bt">🏡</button><button class="btn sec sm" id="dm">💾</button></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><div id="synclink" class="hpill">${syncBadge()}</div><span id="verlink" style="cursor:pointer;font-size:12px;color:rgba(255,255,255,.75)">ℹ️ Version ${APP_VERSION}</span></div></header><main>
   ${SY.uid?"":`<div class="card" id="syncban" style="cursor:pointer;border:2px solid var(--acc);display:flex;gap:12px;align-items:center"><div style="font-size:28px">☁️</div><div><b>Synchronisierung einrichten</b><div style="color:var(--mute);font-size:14px">Einmal anmelden – dann haben PC und iPhone immer denselben Stand.</div></div></div>`}
-  <div class="yearbar"><span>📅 Ablammsaison</span><select id="hyr">${jahre.map(y=>`<option ${y===jahr?"selected":""}>${y}</option>`).join("")}</select></div>
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:17px">${fertig} von ${akt.length} gelammt</b><span style="color:var(--mute)">${pct} %</span></div>
-    <div style="height:12px;background:var(--chip);border-radius:6px;margin-top:8px;overflow:hidden"><div style="height:12px;width:${pct}%;background:linear-gradient(90deg,#5a9a42,#2f6224)"></div></div>
-    <div class="stats" style="margin-bottom:0"><div class="stat"><b>${lam.length}</b><span>Lämmer</span></div><div class="stat"><b>${st("lebend")}</b><span>lebend</span></div><div class="stat"><b>${st("verkauft")}</b><span>verkauft</span></div><div class="stat"><b>${st("tot")}</b><span>verendet</span></div></div>
+  <div class="kpi">
+    <div class="kt" data-go="list"><div class="kl">🐑 Mutterschafe</div><div class="kv">${akt.length}</div><div class="ks">${boecke.length?"+ "+boecke.map(x=>x.name?"Bock "+esc(x.name):"1 Bock").join(", "):"&nbsp;"}</div></div>
+    <div class="kt" data-go="lm"><div class="kl">🐣 Lämmer lebend</div><div class="kv">${leb.length}</div><div class="ks" style="color:var(--acc)">${lw} ♀ · ${lm} ♂</div></div>
+    <div class="kt" style="display:flex;align-items:center;gap:10px"><svg width="48" height="48" viewBox="0 0 46 46" aria-hidden="true"><circle cx="23" cy="23" r="19" fill="none" stroke="var(--chip)" stroke-width="6"/><circle cx="23" cy="23" r="19" fill="none" stroke="var(--acc)" stroke-width="6" stroke-linecap="round" stroke-dasharray="${(pct/100*119.4).toFixed(1)} 120" transform="rotate(-90 23 23)"/><text x="23" y="27" text-anchor="middle" font-size="11" font-weight="700" fill="var(--ink)">${pct}%</text></svg>
+      <div><div class="kl">Gelammt ${jahr}</div><div class="kv" style="font-size:20px">${fertig} / ${akt.length}</div></div></div>
+    <div class="kt" data-go="fin"><div class="kl">💶 Ergebnis ${jahr}</div><div class="kv" style="color:${erg>=0?"var(--acc)":"var(--danger)"}">${erg>=0?"+ ":"− "}${kurzEur(Math.abs(erg))}</div><div class="ks">${kurzEur(ein)} ein · ${kurzEur(aus)} aus</div></div>
   </div>
-  <h2>⏳ Noch nicht gelammt <span style="font-size:14px;color:var(--mute);font-family:inherit">${offen.length}</span></h2>
-  ${offen.length?offen.map(s=>{const l=lammFor(s.id)[0];return `<div class="card ewe" data-id="${esc(s.id)}"><div class="tag ${s.rasse==="Coburger Fuchs"?"fuchs":""}">${esc(kurzNr(s.nr))}</div><div class="info"><div class="name">${esc(s.nr)}</div><div class="sub">${esc(s.rasse||"")}${alterTier(s)?" · "+alterTier(s):""}</div><div class="med">${l?"zuletzt gelammt: "+fmtD(l.datum):"noch nie gelammt"}${s.zugang&&s.zugang.startsWith(jahr)?" · Zugang "+fmtD(s.zugang):""}</div>${s.auff?`<div class="warn">⚠ ${esc(s.auff)}</div>`:""}</div></div>`}).join(""):`<div class="empty">${akt.length?"🎉 Alle Mutterschafe haben "+jahr+" gelammt.":"Noch keine Mutterschafe erfasst."}</div>`}
-  <h2>💊 Laufende Wartezeiten <span style="font-size:14px;color:var(--mute);font-family:inherit">${wz.length}</span></h2>
-  ${wz.length?`<div class="card">${wz.map(x=>`<div class="lamb" data-b="${esc(x.id)}" style="cursor:pointer"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(x.medikament)}</b><span class="wz">bis ${fmtD(x.wartezeit)}</span></div><div style="color:var(--mute);font-size:13px">${tierText(x)} · noch ${Math.round((new Date(x.wartezeit)-new Date(today()))/864e5)} Tage</div></div>`).join("")}</div>`:`<div class="empty" style="padding:16px">Keine laufenden Wartezeiten.</div>`}
-  <h2>💶 Finanzen ${jahr}</h2>
-  <div class="card" style="padding:4px 16px"><div class="finrow"><span>Einnahmen</span><b style="color:var(--acc)">${eur(ein)}</b></div><div class="finrow"><span>Ausgaben</span><b style="color:var(--danger)">${eur(aus)}</b></div><div class="finrow" style="border:0"><b>Ergebnis</b><b style="color:${ein-aus>=0?"var(--acc)":"var(--danger)"}">${eur(ein-aus)}</b></div></div>
-  ${Object.keys(tbl).length?`<h2>🧹 Stallbuch – zuletzt</h2><div class="card">${Object.values(tbl).slice(0,5).map(e=>`<div class="lamb" style="display:flex;justify-content:space-between;gap:8px"><b>${esc(e.taetigkeit)}</b><span style="color:var(--mute)">${vor(e.datum)}</span></div>`).join("")}</div>`:""}
+  <div class="hsec">Heute wichtig</div>
+  <div class="card" style="padding:0 12px">${imp.length?imp.map(x=>`<div class="imp" ${x.a||""}><span class="ii ii-${x.c}">${x.i}</span><div style="flex:1;min-width:0"><div style="font-weight:600">${x.t}</div><div class="ks">${x.s}</div></div>${x.r?`<span style="font-size:12px;color:var(--danger);font-weight:600;white-space:nowrap">${x.r}</span>`:`<span style="color:var(--mute)">›</span>`}</div>`).join(""):`<div class="imp"><span class="ii ii-g">✅</span><div>Alles erledigt – keine offenen Punkte.</div></div>`}</div>
+  <div class="hsec">Schnell erfassen</div>
+  <div class="qa">${S.db?`<button class="qb on" id="qaL"><span>🐣</span>Ablammung</button><button class="qb" id="qaB"><span>💊</span>Behandlung</button><button class="qb" id="qaT"><span>🧹</span>Stallbuch</button><button class="qb" id="qaF"><span>💶</span>Buchung</button>`:""}</div>
+  <div class="hsec" style="display:flex;justify-content:space-between;align-items:center"><span>Lämmer je Monat</span><select id="hyr" class="hsel">${jahre.map(y=>`<option ${y===jahr?"selected":""}>${y}</option>`).join("")}</select></div>
+  <div class="card" style="padding:12px 10px 6px"><svg width="100%" height="96" viewBox="0 0 300 96" aria-label="Lämmer je Monat">
+    ${mon.map((v,i)=>{const hgt=v?Math.max(4,v/mx*62):2;const x=4+i*25;return `<rect x="${x}" y="${72-hgt}" width="18" height="${hgt}" rx="3" fill="${v&&v>=hi?"var(--acc)":v?"#97C459":"var(--chip)"}"/>${v?`<text x="${x+9}" y="${68-hgt}" text-anchor="middle" font-size="9" fill="var(--mute)">${v}</text>`:""}<text x="${x+9}" y="88" text-anchor="middle" font-size="10" fill="var(--mute)">${"JFMAMJJASOND"[i]}</text>`}).join("")}</svg>
+    <div class="ks" style="text-align:center;margin-bottom:4px">${lj.reduce((a,l)=>a+(l.laemmer||[]).length,0)} Lämmer aus ${lj.length} Ablammungen ${jahr}</div></div>
+  <div class="hsec">Noch nicht gelammt · ${offen.length}</div>
+  ${offen.length?zeig.map(s=>{const l=lammFor(s.id)[0];return `<div class="card ewe cmp" data-id="${esc(s.id)}"><div class="tag ${s.rasse==="Coburger Fuchs"?"fuchs":""}">${esc(kurzNr(s.nr))}</div><div class="info"><div class="name">${esc(s.nr)}</div><div class="sub">${esc(s.rasse||"Rasse fehlt")}${alterTier(s)?" · "+alterTier(s):""}</div><div class="med">${l?"zuletzt gelammt: "+fmtD(l.datum):"noch nie gelammt"}</div></div></div>`}).join("")+(offen.length>8?`<button class="btn sec" id="hall" style="width:100%">${S.hall?"Weniger anzeigen":"Alle "+offen.length+" anzeigen"}</button>`:""):`<div class="empty">${akt.length?"🎉 Alle Mutterschafe haben "+jahr+" gelammt.":"Noch keine Mutterschafe erfasst."}</div>`}
   </main>`}
-function bindHome(){const vl=$("verlink");if(vl)vl.onclick=()=>{S.view="version";render();scrollTo(0,0)};const sl=$("synclink");if(sl)sl.onclick=syncSheet;const sb=$("syncban");if(sb)sb.onclick=syncSheet;
+function bindHome(){
+  const vl=$("verlink");if(vl)vl.onclick=()=>{S.view="version";render();scrollTo(0,0)};const sl=$("synclink");if(sl)sl.onclick=syncSheet;const sb=$("syncban");if(sb)sb.onclick=syncSheet;
   const y=$("hyr");if(y)y.onchange=()=>{S.hyear=y.value;render()};
   const bt=$("bt");if(bt)bt.onclick=()=>{S.view="betrieb";render();scrollTo(0,0)};
+  const ha=$("hall");if(ha)ha.onclick=()=>{S.hall=!S.hall;render()};
   document.querySelectorAll("[data-id]").forEach(x=>x.onclick=()=>{S.sel=x.dataset.id;S.view="detail";render();scrollTo(0,0)});
   document.querySelectorAll("[data-b]").forEach(x=>x.onclick=()=>behForm(S.beh.find(y=>y.id===x.dataset.b)));
+  document.querySelectorAll("[data-go]").forEach(x=>x.onclick=()=>{const g=x.dataset.go;if(g==="unv"){S.tab="list";S.filter="unvollständig"}else S.tab=g;S.view="list";render();scrollTo(0,0)});
+  const q=(id,f)=>{const e=$(id);if(e)e.onclick=f};
+  q("qaL",()=>waehleMutter());q("qaB",()=>behForm());q("qaT",()=>tbForm());q("qaF",()=>finForm());
 }
+function waehleMutter(){
+  const jahr=new Date().getFullYear()+"";const gel=new Set(S.lamm.filter(l=>(l.datum||"").startsWith(jahr)).map(l=>l.schafId));
+  const akt=S.schafe.filter(istMutter).sort((a,b)=>(gel.has(a.id)-gel.has(b.id))||String(a.nr||"").localeCompare(String(b.nr||""),"de",{numeric:true}));let q="";
+  openSheet(`<h3>Ablammung – welches Mutterschaf?</h3><input id="wq" type="search" placeholder="Ohrmarke suchen …" style="margin-top:10px"><div class="chklist" id="wl" style="max-height:55vh"></div><div class="acts"><button class="btn sec" id="cx">Abbrechen</button></div>`);
+  const draw=()=>{const l=akt.filter(s=>!q||String(s.nr).toLowerCase().replace(/\s+/g,"").includes(q));
+    $("wl").innerHTML=l.map(s=>`<div class="ck" data-w="${esc(s.id)}"><span><b>${esc(s.nr)}</b> <span style="color:var(--mute);font-size:13px">${esc(s.rasse||"")}${gel.has(s.id)?" · hat "+jahr+" schon gelammt":""}</span></span></div>`).join("")||`<div class="ckleer">Keine Treffer.</div>`;
+    document.querySelectorAll("[data-w]").forEach(x=>x.onclick=()=>{const s=S.schafe.find(y=>y.id===x.dataset.w);closeSheet();setTimeout(()=>lammForm(s),60)})};
+  draw();$("cx").onclick=closeSheet;const wq=$("wq");wq.oninput=()=>{q=wq.value.toLowerCase().replace(/\s+/g,"");draw()};setTimeout(()=>wq.focus(),100)}
 
 /* ---------- Medikamentenliste ---------- */
 function medHTML(){
@@ -865,9 +917,10 @@ function feldForm(f){const neu=!f;f=f||{besitz:"Eigentum"};const n=neu?0:S.ernte
 }
 
 /* ---------- Versionsbuch ---------- */
-const APP_VERSION="1.14";
+const APP_VERSION="1.15";
 const ONLINE_URL="https://raw.githubusercontent.com/8p9754h2g7-dotcom/herdenbuch/main/index.html";
 const CHANGELOG=[
+ ["1.15","23.11.2026",["Neu gestaltete Übersicht mit Begrüßung und vier Kennzahl-Kacheln","„Heute wichtig“: Wartezeiten, unvollständige Stammdaten, Lämmer ohne Ohrmarke, länger nicht erledigte Stallarbeiten","„Schnell erfassen“: Ablammung, Behandlung, Stallbuch und Buchung direkt von der Startseite","Grafik „Lämmer je Monat“","Kompakte Liste „Noch nicht gelammt“"]],
  ["1.14","23.11.2026",["Versionsbuch: Neuigkeiten jeder Version und Anzeige, welche Version online ist","Hinweis „Neu in dieser Version“ nach jedem Update","Knopf „Jetzt aktualisieren“, wenn online eine neuere Version liegt"]],
  ["1.13","23.11.2026",["Neuer Bereich 🌾 Ernte: Schnitte mit Feld, Beginn, Ende, Ballen und Art","Felderverzeichnis mit Größe (ha), Flurnummer, Eigentum/Pacht","Vergleich je Feld und je Jahr, Ballen je ha, Excel-Export","Finanz-Kategorie „Ernte & Lohnarbeit“"]],
  ["1.12","23.11.2026",["Suchfeld im Bereich Lämmer (Lammnummer oder Mutterschaf)","Name für Böcke – Bock „Felix“ hinterlegt","Deckbock bei neuer Ablammung automatisch vorausgewählt","Alter ohne Geburtsdatum wird ab „Zugang am“ berechnet (mind. …)"]],
