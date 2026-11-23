@@ -160,7 +160,9 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--acc);outline-off
 <div class="toast" id="toast"></div>
 
 <script>
-const RASSEN=["Weißes Bergschaf","Coburger Fuchs","Kreuzung","Sonstige"];
+const RASSEN=["Weißes Bergschaf","Coburger Fuchs","Charollais","Jura","Kreuzung","Sonstige"];
+const isBock=s=>s&&s.typ==="Bock";
+const istMutter=s=>s&&s.typ!=="Bock"&&s.status!=="abgegangen";
 const S={kunden:[],med:[],fin:[],tab:"home",beh:[],tb:[],db:null,schafe:[],lamm:[],loaded:{s:false,l:false},err:null,view:"list",sel:null,q:"",filter:"alle",readonly:false};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -187,11 +189,13 @@ function render(){
   if(S.filter==="aktiv")list=list.filter(s=>s.status!=="abgegangen");
   else if(S.filter==="abgegangen")list=list.filter(s=>s.status==="abgegangen");
   else if(RASSEN.includes(S.filter))list=list.filter(s=>s.rasse===S.filter&&s.status!=="abgegangen");
+  else if(S.filter==="Böcke")list=list.filter(s=>isBock(s)&&s.status!=="abgegangen");
+  else if(S.filter==="unvollständig")list=list.filter(s=>s.status!=="abgegangen"&&(!s.rasse||!s.zugang||!s.herkunft||!s.zuechter));
   if(S.filter==="alle")list=list.filter(s=>s.status!=="abgegangen");
   const q=S.q.trim().toLowerCase();
   if(q)list=list.filter(s=>[s.nr,s.name,s.zuechter,s.auff,s.rasse].join(" ").toLowerCase().includes(q));
   list.sort((a,b)=>String(a.nr||"").localeCompare(String(b.nr||""),"de",{numeric:true}));
-  const aktiv=S.schafe.filter(s=>s.status!=="abgegangen").length;
+  const aktiv=S.schafe.filter(istMutter).length,boecke=S.schafe.filter(s=>isBock(s)&&s.status!=="abgegangen").length,unv=S.schafe.filter(s=>s.status!=="abgegangen"&&(!s.rasse||!s.zugang||!s.herkunft||!s.zuechter)).length;
   const cur=new Date().getFullYear()+"";
   const jahre=[...new Set([cur,...S.lamm.map(l=>(l.datum||"").slice(0,4)).filter(y=>/^\d{4}$/.test(y))])].sort().reverse();
   const jahr=jahre.includes(S.year)?S.year:cur;
@@ -199,9 +203,9 @@ function render(){
   const lzahl=lj.reduce((n,l)=>n+(l.laemmer||[]).length,0);
   app.innerHTML=`
   <header>
-    <h1>🐑 Herdenbuch <small>${aktiv} Mutterschafe</small><button class="btn sec sm" id="bt" title="Betrieb">🏡</button><button class="btn sec sm" id="dm" title="Sichern / Einlesen">💾</button></h1>
-    <input id="q" type="search" placeholder="Suche: Ohrmarke, Name, Züchter …" value="${esc(S.q)}">
-    <div class="chips">${["alle",...RASSEN.slice(0,2),"abgegangen"].map(f=>`<button class="chip ${S.filter===f?"on":""}" data-f="${esc(f)}">${f==="alle"?"Alle aktiven":esc(f)}</button>`).join("")}</div>
+    <h1>🐑 Herdenbuch <small>${aktiv} Mutterschafe${boecke?` · ${boecke} ${boecke===1?"Bock":"Böcke"}`:""}</small><button class="btn sec sm" id="bt" title="Betrieb">🏡</button><button class="btn sec sm" id="dm" title="Sichern / Einlesen">💾</button></h1>
+    <input id="q" type="search" placeholder="Suche: Ohrmarke, Rasse, Züchter …" value="${esc(S.q)}">
+    <div class="chips">${["alle",...RASSEN.slice(0,2),...(boecke?["Böcke"]:[]),...(unv?["unvollständig"]:[]),"abgegangen"].map(f=>`<button class="chip ${S.filter===f?"on":""}" data-f="${esc(f)}">${f==="alle"?"Alle aktiven":f==="unvollständig"?`⚠ Unvollständig (${unv})`:esc(f)}</button>`).join("")}</div>
   </header>
   <main>
     ${S.err?`<div class="note">${esc(S.err)}</div>`:""}
@@ -214,9 +218,9 @@ function render(){
       <div class="stat"><b>${lj.length?(lzahl/lj.length).toFixed(2).replace(".",","):"–"}</b><span>Ø/Ablamm.</span></div>
     </div>
     ${loading&&!S.err?`<div class="empty">Daten werden geladen …</div>`:
-      list.length?list.map(eweCard).join(""):`<div class="empty">${S.schafe.length?"Keine Treffer.":"Noch keine Mutterschafe erfasst.<br>Tippe unten auf „+ Mutterschaf“."}</div>`}
+      list.length?list.map(eweCard).join(""):`<div class="empty">${S.schafe.length?"Keine Treffer.":"Noch keine Tiere erfasst.<br>Tippe unten auf „+ Tier“."}</div>`}
   </main>
-  ${S.readonly||!S.db?"":`<button class="fab" id="add">+ Mutterschaf</button>`}`+tabbar();bindTabs();
+  ${S.readonly||!S.db?"":`<button class="fab" id="add">+ Tier</button>`}`+tabbar();bindTabs();
   const qi=$("q");qi.oninput=e=>{S.q=e.target.value;const p=qi.selectionStart;render();const n=$("q");n.focus();n.setSelectionRange(p,p)};
   app.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{S.filter=b.dataset.f;render()});
   app.querySelectorAll("[data-id]").forEach(b=>b.onclick=()=>{S.sel=b.dataset.id;S.view="detail";render();scrollTo(0,0)});
@@ -227,7 +231,7 @@ function eweCard(s){
   return `<div class="card ewe" data-id="${esc(s.id)}">
     <div class="tag ${s.rasse==="Coburger Fuchs"?"fuchs":""}">${esc(kurzNr(s.nr))}</div>
     <div class="info">
-      <div class="name">${esc(s.nr||"?")} ${s.status==="abgegangen"?'<span class="badge">abgegangen</span>':""}</div>
+      <div class="name">${esc(s.nr||"?")} ${isBock(s)?'<span class="badge" style="background:#3d5a80;color:#fff">♂ Bock</span>':""}${!s.rasse||!s.zugang||!s.herkunft||!s.zuechter?'<span class="badge" style="background:#f6efd6;color:#6b5a2a">⚠ unvollständig</span>':""} ${s.status==="abgegangen"?'<span class="badge">abgegangen</span>':""}</div>
       <div class="sub">${esc(s.rasse||"")}${s.geb?" · "+alter(s.geb):""} · ${l.length} Ablamm. / ${n} Lämmer</div>
       ${s.auff?`<div class="warn">⚠ ${esc(s.auff)}</div>`:""}
       ${(()=>{const b=behFor(s.id)[0];return b?`<div class="med">💊 ${fmtD(b.datum)} · ${esc(b.medikament)} ${wzBadge(b)}</div>`:""})()}
@@ -261,6 +265,7 @@ function detailHTML(){
     <h2>Stammdaten ${ro?"":`<button class="btn sec sm" id="ed">Bearbeiten</button>`}</h2>
     <div class="card"><dl>
       <dt>Ohrmarke</dt><dd>${esc(s.nr||"–")}</dd>
+      <dt>Typ</dt><dd>${isBock(s)?"Bock":"Mutterschaf"}</dd>
       <dt>Rasse</dt><dd>${esc(s.rasse||"–")}</dd>
       <dt>Geboren</dt><dd>${fmtD(s.geb)}${s.geb?` (${alter(s.geb)})`:""}</dd>
       <dt>Herkunft</dt><dd>${esc(s.herkunft||"–")}</dd>
@@ -272,7 +277,7 @@ function detailHTML(){
     </dl></div>
     ${s.auff?`<div class="card"><b style="color:var(--danger)">⚠ Auffälligkeiten</b><div style="white-space:pre-wrap;margin-top:4px">${esc(s.auff)}</div></div>`:""}
     ${s.notiz?`<div class="card"><b>Notizen</b><div style="white-space:pre-wrap;margin-top:4px">${esc(s.notiz)}</div></div>`:""}
-    <h2>Ablammungen ${ro?"":`<button class="btn sm" id="al">+ Ablammung</button>`}</h2>
+    <h2>${isBock(s)?"Ablammungen (als Deckbock)":"Ablammungen"} ${ro||isBock(s)?"":`<button class="btn sm" id="al">+ Ablammung</button>`}</h2>
     ${l.length?l.map(x=>`<div class="card" ${ro?"":`data-l="${esc(x.id)}" style="cursor:pointer"`}>
       <div style="display:flex;justify-content:space-between;font-weight:600"><span>${fmtD(x.datum)}</span><span>${(x.laemmer||[]).length} ${(x.laemmer||[]).length===1?"Lamm":"Lämmer"}</span></div>
       <div class="sub" style="color:var(--mute);font-size:14px">${x.bock?"Bock: "+esc(x.bock)+" · ":""}${esc(x.verlauf||"")}</div>
@@ -291,7 +296,7 @@ const behFor=id=>S.beh.filter(b=>(b.schafIds||[]).includes(id)).sort((a,b)=>(b.d
 const wzBadge=b=>b.wartezeit&&b.wartezeit>=today()?`<span class="wz">Wartezeit bis ${fmtD(b.wartezeit)}</span>`:"";
 const schafName=id=>{const s=S.schafe.find(x=>x.id===id);return s?(s.nr+(s.name?" "+s.name:"")):"(gelöscht)"};
 function tierText(b){const n=(b.schafIds||[]).length,m=(b.lammIds||[]).length,p=[];
-  if(n)p.push(b.alle?`alle Mutterschafe (${n})`:n<=3?(b.schafIds||[]).map(schafName).map(esc).join(", "):`${n} Mutterschafe`);
+  if(n)p.push(b.alle?`alle Schafe (${n})`:n<=3?(b.schafIds||[]).map(schafName).map(esc).join(", "):`${n} Mutterschafe`);
   if(m)p.push(b.alleL?`alle Lämmer (${m})`:m<=3?"Lamm "+(b.lammIds||[]).map(id=>{const y=lammById(id);return y?esc(y.nr||"o. Ohrmarke"):"?"}).join(", "):`${m} Lämmer`);
   return p.join(" + ")||"–"}
 function behCard(b){return `<div class="card" ${S.db?`data-b="${esc(b.id)}" style="cursor:pointer"`:""}>
@@ -574,7 +579,7 @@ function homeHTML(){
   const cur=new Date().getFullYear()+"";
   const jahre=[...new Set([cur,...S.lamm.map(l=>(l.datum||"").slice(0,4)).filter(y=>/^\d{4}$/.test(y))])].sort().reverse();
   const jahr=jahre.includes(S.hyear)?S.hyear:cur;
-  const akt=S.schafe.filter(s=>s.status!=="abgegangen").sort((a,b)=>String(a.nr||"").localeCompare(String(b.nr||""),"de",{numeric:true}));
+  const akt=S.schafe.filter(istMutter).sort((a,b)=>String(a.nr||"").localeCompare(String(b.nr||""),"de",{numeric:true}));
   const lj=S.lamm.filter(l=>(l.datum||"").startsWith(jahr));
   const gelammt=new Set(lj.map(l=>l.schafId));
   const offen=akt.filter(s=>!gelammt.has(s.id)),fertig=akt.length-offen.length,pct=akt.length?Math.round(fertig/akt.length*100):0;
@@ -583,7 +588,8 @@ function homeHTML(){
   const fy=S.fin.filter(f=>(f.datum||"").startsWith(jahr)),ein=fy.filter(f=>f.art==="ein").reduce((a,f)=>a+f.betrag,0),aus=fy.filter(f=>f.art==="aus").reduce((a,f)=>a+f.betrag,0);
   const tbl={};for(const e of S.tb.slice().sort((a,b)=>(b.datum||"").localeCompare(a.datum||""))){const k=(e.taetigkeit||"").trim().toLowerCase();if(k&&!tbl[k])tbl[k]=e}
   const b=(store&&store.betrieb)||{};
-  return `<header><h1>🏠 Übersicht <small>${b.inhaber?esc(b.inhaber):""}</small><button class="btn sec sm" id="bt">🏡</button><button class="btn sec sm" id="dm">💾</button></h1></header><main>
+  return `<header><h1>🏠 Übersicht <small>${b.inhaber?esc(b.inhaber):""}</small><button class="btn sec sm" id="bt">🏡</button><button class="btn sec sm" id="dm">💾</button></h1><div id="synclink" style="cursor:pointer;margin-top:4px">${syncBadge()}</div></header><main>
+  ${SY.uid?"":`<div class="card" id="syncban" style="cursor:pointer;border:2px solid var(--acc);display:flex;gap:12px;align-items:center"><div style="font-size:28px">☁️</div><div><b>Synchronisierung einrichten</b><div style="color:var(--mute);font-size:14px">Einmal anmelden – dann haben PC und iPhone immer denselben Stand.</div></div></div>`}
   <div class="yearbar"><span>📅 Ablammsaison</span><select id="hyr">${jahre.map(y=>`<option ${y===jahr?"selected":""}>${y}</option>`).join("")}</select></div>
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:17px">${fertig} von ${akt.length} gelammt</b><span style="color:var(--mute)">${pct} %</span></div>
@@ -598,7 +604,7 @@ function homeHTML(){
   <div class="card" style="padding:4px 16px"><div class="finrow"><span>Einnahmen</span><b style="color:var(--acc)">${eur(ein)}</b></div><div class="finrow"><span>Ausgaben</span><b style="color:var(--danger)">${eur(aus)}</b></div><div class="finrow" style="border:0"><b>Ergebnis</b><b style="color:${ein-aus>=0?"var(--acc)":"var(--danger)"}">${eur(ein-aus)}</b></div></div>
   ${Object.keys(tbl).length?`<h2>🧹 Stallbuch – zuletzt</h2><div class="card">${Object.values(tbl).slice(0,5).map(e=>`<div class="lamb" style="display:flex;justify-content:space-between;gap:8px"><b>${esc(e.taetigkeit)}</b><span style="color:var(--mute)">${vor(e.datum)}</span></div>`).join("")}</div>`:""}
   </main>`}
-function bindHome(){
+function bindHome(){const sl=$("synclink");if(sl)sl.onclick=syncSheet;const sb=$("syncban");if(sb)sb.onclick=syncSheet;
   const y=$("hyr");if(y)y.onchange=()=>{S.hyear=y.value;render()};
   const bt=$("bt");if(bt)bt.onclick=()=>{S.view="betrieb";render();scrollTo(0,0)};
   document.querySelectorAll("[data-id]").forEach(x=>x.onclick=()=>{S.sel=x.dataset.id;S.view="detail";render();scrollTo(0,0)});
@@ -684,7 +690,7 @@ function behForm(b,pre){
     <div class="row"><div><label>Behandelt von</label><input name="von" value="${esc(b.von)}" placeholder="selbst / Tierarzt"></div>
     <div><label>Charge / Beleg-Nr.</label><input name="charge" value="${esc(b.charge)}"></div></div>
     <label>Welche Tiere?</label>
-    <div class="seg"><button type="button" class="chip" id="mAll">Alle Mutterschafe (${aktive.length})</button><button type="button" class="chip" id="mAllL">Alle Lämmer (${lebL.length})</button></div>
+    <div class="seg"><button type="button" class="chip" id="mAll">Alle Schafe (${aktive.length})</button><button type="button" class="chip" id="mAllL">Alle Lämmer (${lebL.length})</button></div>
     <div id="tl"></div>
     <label>Notiz</label><textarea name="notiz">${esc(b.notiz)}</textarea>
     <div class="acts">${b.id?`<button type="button" class="btn del" id="del">Löschen</button>`:""}<button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div></form>`);
@@ -703,9 +709,9 @@ function behForm(b,pre){
     const ewes=allE?[]:[...aktive,...extra].filter(s=>!q||String(s.nr).toLowerCase().includes(q));
     const lambs=allL?[]:[...lebL,...extraL].filter(y=>!q||[y.nr,y.mutter&&y.mutter.nr].join(" ").toLowerCase().includes(q));
     const nE=allE?aktive.length:sel.size,nL=allL?lebL.length:lsel.size;
-    $("tl").innerHTML=`<div style="color:var(--mute);font-size:13px;margin-top:6px">Gewählt: <b>${nE}</b> Mutterschafe · <b>${nL}</b> Lämmer</div>
+    $("tl").innerHTML=`<div style="color:var(--mute);font-size:13px;margin-top:6px">Gewählt: <b>${nE}</b> Schafe · <b>${nL}</b> Lämmer</div>
       ${allE&&allL?"":`<input id="tq" type="search" placeholder="Ohrmarke suchen …" value="${esc(q)}" style="margin-top:8px">
-      <div class="chklist">${allE?"":`<div class="cksec">🐑 Mutterschafe</div>`+(ewes.map(s=>`<label class="ck"><input type="checkbox" data-s="${esc(s.id)}" ${sel.has(s.id)?"checked":""}><span><b>${esc(s.nr)}</b> <span style="color:var(--mute);font-size:13px">${esc(s.rasse||"")}</span></span></label>`).join("")||`<div class="ckleer">keine</div>`)}
+      <div class="chklist">${allE?"":`<div class="cksec">🐑 Mutterschafe & Böcke</div>`+(ewes.map(s=>`<label class="ck"><input type="checkbox" data-s="${esc(s.id)}" ${sel.has(s.id)?"checked":""}><span><b>${esc(s.nr)}</b>${isBock(s)?" ♂":""} <span style="color:var(--mute);font-size:13px">${esc(s.rasse||"")}</span></span></label>`).join("")||`<div class="ckleer">keine</div>`)}
       ${allL?"":`<div class="cksec">🐣 Lämmer</div>`+(lambs.map(y=>`<label class="ck"><input type="checkbox" data-lb="${esc(y.id)}" ${lsel.has(y.id)?"checked":""}><span>${lammLabel(y)}</span></label>`).join("")||`<div class="ckleer">keine lebenden Lämmer</div>`)}</div>`}`;
     const tq=$("tq");if(tq)tq.oninput=()=>{q=tq.value.toLowerCase();const p=tq.selectionStart;drawT();const n=$("tq");n.focus();n.setSelectionRange(p,p)};
     document.querySelectorAll("[data-s]").forEach(c=>c.onchange=()=>{c.checked?sel.add(c.dataset.s):sel.delete(c.dataset.s);drawT()});
@@ -731,10 +737,11 @@ function armDelete(btn,fn){btn.onclick=()=>{if(btn.classList.contains("armed"))r
 
 function eweForm(s){
   s=s||{status:"aktiv",rasse:RASSEN[0]};
-  openSheet(`<h3>${s.id?"Mutterschaf bearbeiten":"Neues Mutterschaf"}</h3>
+  openSheet(`<h3>${s.id?(isBock(s)?"Bock bearbeiten":"Mutterschaf bearbeiten"):"Neues Tier"}</h3>
   <form id="f">
     <label>Ohrmarkennr. *</label><input name="nr" required value="${esc(s.nr)}" placeholder="z. B. DE 09 187 …">
-    <label>Rasse *</label><select name="rasse" required>${RASSEN.map(r=>`<option ${s.rasse===r?"selected":""}>${r}</option>`).join("")}</select>
+    <label>Typ *</label><div class="seg"><label class="chip" style="text-align:center"><input type="radio" name="typ" value="Mutterschaf" ${!isBock(s)?"checked":""} style="width:auto;margin-right:6px">Mutterschaf</label><label class="chip" style="text-align:center"><input type="radio" name="typ" value="Bock" ${isBock(s)?"checked":""} style="width:auto;margin-right:6px">Bock</label></div>
+    <label>Rasse *</label><select name="rasse" required><option value="">– bitte wählen –</option>${[...RASSEN,...(s.rasse&&!RASSEN.includes(s.rasse)?[s.rasse]:[])].map(r=>`<option ${s.rasse===r?"selected":""}>${r}</option>`).join("")}</select>
     <div class="row"><div><label>Geburtsdatum</label><input type="date" name="geb" value="${esc(s.geb)}"></div>
     <div><label>Zugang am *</label><input type="date" name="zugang" required value="${esc(s.zugang)}"></div></div>
     <label>Herkunft * (Betrieb / Ort / eigene Nachzucht)</label><input name="herkunft" required value="${esc(s.herkunft)}">
@@ -799,7 +806,7 @@ function lammForm(s,l){
   <div style="color:var(--mute)">${esc(s.nr)} ${esc(s.name||"")}</div>
   <form id="f">
     <div class="row"><div><label>Datum *</label><input type="date" name="datum" required value="${esc(l.datum)}"></div>
-    <div><label>Deckbock</label><input name="bock" value="${esc(l.bock)}"></div></div>
+    <div><label>Deckbock</label><input name="bock" list="bkl" value="${esc(l.bock)}" placeholder="Bock wählen"><datalist id="bkl">${S.schafe.filter(x=>isBock(x)&&x.status!=="abgegangen").map(x=>`<option value="${esc(x.nr)}">${esc(x.rasse||"")}</option>`).join("")}</datalist></div></div>
     <label>Geburtsverlauf</label><select name="verlauf">${["leicht","mit Hilfe","schwer","Tierarzt"].map(o=>`<option ${l.verlauf===o?"selected":""}>${o}</option>`).join("")}</select>
     <div id="lb"></div>
     <button type="button" class="btn sec" id="addl" style="width:100%;margin-top:10px">+ weiteres Lamm</button>
@@ -832,7 +839,7 @@ const KEY="herdenbuch-v1";
 const BETRIEB_START={};
 let store;
 function loadStore(){try{const o=JSON.parse(localStorage.getItem(KEY));if(o&&o.schafe&&o.lammungen){o.behandlungen=o.behandlungen||{};o.finanzen=o.finanzen||{};o.kunden=o.kunden||{};o.medikamente=o.medikamente||{};o.stallbuch=o.stallbuch||{};o.meta=o.meta||{};o.betrieb=o.betrieb||{...BETRIEB_START};return o}}catch(e){}return{schafe:{},lammungen:{},finanzen:{},kunden:{},medikamente:{},behandlungen:{},stallbuch:{},meta:{},betrieb:{...BETRIEB_START}}}
-function saveStore(){store.meta=store.meta||{};store.meta.geaendert=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(store))}
+function saveStore(){store.meta=store.meta||{};store.meta.geaendert=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(store));if(typeof syncPush==="function")syncPush()}
 function ensureLambIds(o){for(const[lid,l]of Object.entries(o.lammungen||{}))(l.laemmer||[]).forEach((y,i)=>{if(!y.id)y.id=lid+"_"+i})}
 function refresh(){ensureLambIds(store);S.schafe=Object.entries(store.schafe).map(([id,d])=>({...d,id}));S.lamm=Object.entries(store.lammungen).map(([id,d])=>({...d,id}));S.beh=Object.entries(store.behandlungen).map(([id,d])=>({...d,id}));S.tb=Object.entries(store.stallbuch).map(([id,d])=>({...d,id}));S.fin=Object.entries(store.finanzen).map(([id,d])=>({...d,id}));S.kunden=Object.entries(store.kunden).map(([id,d])=>({...d,id}));S.med=Object.entries(store.medikamente).map(([id,d])=>({...d,id}));render()}
 const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
@@ -857,9 +864,9 @@ function exportCSV(){
   download(`herdenbuch_laemmer_${stamp()}.csv`,"﻿"+rows.map(r=>r.map(csvCell).join(";")).join("\r\n"),"text/csv")}
 function exportBestandCSV(){
   const akt=S.schafe.filter(x=>x.status!=="abgegangen").sort((a,b)=>String(a.nr||"").localeCompare(String(b.nr||""),"de",{numeric:true}));
-  const rows=[["Ohrmarkennr.","Rasse","Geburtsdatum","Alter","Herkunft","Züchter","Zugang am","Kaufpreis","Vater","Auffälligkeiten","Notizen","Ablammungen","Lämmer gesamt","Lämmer verkauft (zugeordnet)","Erlöse Lämmer gesamt","Letzte Ablammung","Letzte Behandlung","Medikament"]];
+  const rows=[["Ohrmarkennr.","Typ","Rasse","Geburtsdatum","Alter","Herkunft","Züchter","Zugang am","Kaufpreis","Vater","Auffälligkeiten","Notizen","Ablammungen","Lämmer gesamt","Lämmer verkauft (zugeordnet)","Erlöse Lämmer gesamt","Letzte Ablammung","Letzte Behandlung","Medikament"]];
   for(const x of akt){const l=lammFor(x.id),b=behFor(x.id)[0];
-    const er=erloesSchaf(x.id);rows.push([x.nr,x.rasse,fmtD(x.geb),alter(x.geb),x.herkunft,x.zuechter,fmtD(x.zugang),Number(x.kaufpreis)>0?Number(x.kaufpreis).toFixed(2).replace(".",","):"",x.vater,x.auff,x.notiz,l.length,l.reduce((n,y)=>n+(y.laemmer||[]).length,0),er.n,er.sum?er.sum.toFixed(2).replace(".",","):"",l[0]?fmtD(l[0].datum):"",b?fmtD(b.datum):"",b?b.medikament:""].map(v=>v==="–"?"":v))}
+    const er=erloesSchaf(x.id);rows.push([x.nr,isBock(x)?"Bock":"Mutterschaf",x.rasse,fmtD(x.geb),alter(x.geb),x.herkunft,x.zuechter,fmtD(x.zugang),Number(x.kaufpreis)>0?Number(x.kaufpreis).toFixed(2).replace(".",","):"",x.vater,x.auff,x.notiz,l.length,l.reduce((n,y)=>n+(y.laemmer||[]).length,0),er.n,er.sum?er.sum.toFixed(2).replace(".",","):"",l[0]?fmtD(l[0].datum):"",b?fmtD(b.datum):"",b?b.medikament:""].map(v=>v==="–"?"":v))}
   download(`mutterschaf_bestand_${stamp()}.csv`,"\ufeff"+rows.map(r=>r.map(csvCell).join(";")).join("\r\n"),"text/csv");toast(`${akt.length} Mutterschafe exportiert`)}
 function exportBehCSV(){
   const rows=[["Datum","Medikament","Grund","Dosis","Wartezeit bis","Behandelt von","Charge/Beleg","Alle Tiere","Ohrmarke","Name","Notiz"]];
@@ -869,13 +876,14 @@ function exportBehCSV(){
 function importJSON(file){
   const fr=new FileReader();fr.onload=()=>{try{
     const inc=JSON.parse(fr.result);if(!inc.schafe||!inc.lammungen)throw 0;
-    const del={...(store.deleted||{}),...(inc.deleted||{})};let n=0;
+    const del={...(store.deleted||{}),...(inc.deleted||{})};let n=0,skipNr=0;
     for(const c of ["schafe","lammungen","behandlungen","stallbuch","finanzen","kunden","medikamente"])for(const[id,d]of Object.entries(inc[c]||{})){
       const cur=store[c][id];if(del[c+"/"+id])continue;
+      if(c==="schafe"&&!cur){const nn=String(d.nr||"").replace(/\s+/g,"").toLowerCase();if(nn&&Object.entries(store.schafe).some(([i2,x])=>i2!==id&&String(x.nr||"").replace(/\s+/g,"").toLowerCase()===nn)){skipNr=(skipNr||0)+1;continue}}
       if(!cur||(d.geaendert||"")>(cur.geaendert||"")){store[c][id]=d;n++}}
     for(const k of Object.keys(del)){const[c,id]=k.split("/");if(store[c])delete store[c][id]}
     if(inc.betrieb&&(inc.betrieb.geaendert||"")>((store.betrieb||{}).geaendert||"")){store.betrieb=inc.betrieb;n++}
-    store.deleted=del;saveStore();refresh();closeSheet();toast(`Eingelesen: ${n} neue/geänderte Einträge`)
+    store.deleted=del;saveStore();refresh();closeSheet();toast(`Eingelesen: ${n} neue/geänderte Einträge${skipNr?` · ${skipNr} Tiere schon vorhanden (gleiche Ohrmarke)`:""}`)
   }catch(e){toast("Datei konnte nicht gelesen werden")}};fr.readAsText(file)}
 function dataMenu(){
   const last=store.meta&&store.meta.sicherung;
@@ -887,10 +895,11 @@ function dataMenu(){
   <button class="btn sec" style="width:100%;margin-top:10px" id="csvs">🐑 Aktueller Mutterschaf-Bestand (CSV)</button>
   <button class="btn sec" style="width:100%;margin-top:10px" id="csv">📊 Schafe & Lämmer als Excel-Tabelle (CSV)</button>
   <button class="btn sec" style="width:100%;margin-top:10px" id="csvb">💊 Behandlungen als Excel-Tabelle (CSV)</button>
-  <button class="btn sec" style="width:100%;margin-top:22px" id="pwc">🔑 Passwort ändern</button>
+  <button class="btn" style="width:100%;margin-top:22px" id="syb">☁️ Synchronisierung ${SY.uid?"(angemeldet)":"einrichten"}</button>
+  <button class="btn sec" style="width:100%;margin-top:10px" id="pwc">🔑 Passwort ändern</button>
   <button class="btn sec" style="width:100%;margin-top:10px" id="lknow">🔒 Jetzt sperren</button>
   <div class="acts"><button class="btn sec" id="cx">Schließen</button></div>`);
-  $("pwc").onclick=()=>{closeSheet();showLock("change")};$("lknow").onclick=()=>{closeSheet();showLock(pwData()?"unlock":"setup")};
+  $("pwc").onclick=()=>{closeSheet();showLock("change")};$("syb").onclick=()=>{closeSheet();setTimeout(syncSheet,50)};$("lknow").onclick=()=>{closeSheet();showLock(pwData()?"unlock":"setup")};
   $("ex").onclick=exportJSON;$("csv").onclick=exportCSV;$("csvb").onclick=exportBehCSV;$("csvs").onclick=exportBestandCSV;$("cx").onclick=closeSheet;
   $("im").onchange=e=>{if(e.target.files[0])importJSON(e.target.files[0])};
 }
@@ -951,7 +960,94 @@ function lockInit(){showLock(pwData()?"unlock":"setup")}
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(document.hidden)hiddenAt=Date.now();else if(hiddenAt&&Date.now()-hiddenAt>5*60*1000&&pwData()&&!$("lock"))showLock("unlock")});
 
+/* ---------- Cloud-Synchronisierung (Firebase) ---------- */
+const FB_CONFIG={apiKey:"AIzaSyBQytVN_fPvSkOya9XJHK-4_2CjcEHha1s",authDomain:"herdenbuch-658b1.firebaseapp.com",projectId:"herdenbuch-658b1",storageBucket:"herdenbuch-658b1.firebasestorage.app",messagingSenderId:"689034701101",appId:"1:689034701101:web:0673474370a60c1a390ba4"};
+const FB_URL="https://www.gstatic.com/firebasejs/11.10.0/";
+const SYNC_C=["schafe","lammungen","behandlungen","stallbuch","finanzen","kunden","medikamente"];
+const SHADOWKEY="herdenbuch-shadow";
+const SY={state:"aus",email:"",fb:null,auth:null,fs:null,uid:null,unsub:[],first:{},pending:false,loading:false};
+let shadow={};try{shadow=JSON.parse(localStorage.getItem(SHADOWKEY))||{}}catch(e){shadow={}}
+const saveShadow=()=>{try{localStorage.setItem(SHADOWKEY,JSON.stringify(shadow))}catch(e){}};
+const jclean=o=>JSON.parse(JSON.stringify(o??{}));
+function syncSetState(st){if(SY.state===st)return;SY.state=st;const el=$("syncdot");if(el)el.outerHTML=syncBadge();}
+function syncBadge(){const m={aus:["☁️ nicht verbunden","var(--mute)"],verbinde:["⏳ verbinde …","var(--mute)"],ok:["✅ synchron","#8fd16a"],ausstehend:["⏳ wird übertragen","#e9d9a6"],offline:["📴 offline – wird später übertragen","#e9d9a6"],fehler:["⚠ Sync-Fehler","#ff9a8a"]}[SY.state]||["",""];
+  return `<span id="syncdot" style="font-size:12px;font-weight:600;color:${m[1]};white-space:nowrap">${m[0]}</span>`}
+async function syncLoad(){
+  if(SY.fb)return SY.fb;
+  const[app,auth,fs]=await Promise.all([import(FB_URL+"firebase-app.js"),import(FB_URL+"firebase-auth.js"),import(FB_URL+"firebase-firestore.js")]);
+  const a=app.initializeApp(FB_CONFIG);
+  let db;try{db=fs.initializeFirestore(a,{localCache:fs.persistentLocalCache({tabManager:fs.persistentMultipleTabManager()})})}catch(e){db=fs.getFirestore(a)}
+  SY.fb={app,auth,fs,a,db,au:auth.getAuth(a)};return SY.fb}
+function syncPushNow(){
+  if(!SY.fb||!SY.uid)return;const{fs,db}=SY.fb;const base=["users",SY.uid];let n=0;
+  const put=(ref,data)=>{n++;fs.setDoc(ref,jclean(data)).catch(e=>{console.warn(e);syncSetState("fehler")})};
+  const del=ref=>{n++;fs.deleteDoc(ref).catch(e=>{console.warn(e);syncSetState("fehler")})};
+  for(const c of SYNC_C){if(!SY.first[c])continue;const cur=store[c]||{},sh=shadow[c]=shadow[c]||{};
+    for(const id in cur){const j=JSON.stringify(cur[id]);if(sh[id]!==j){put(fs.doc(db,...base,c,id),cur[id]);sh[id]=j}}
+    for(const id in sh)if(!(id in cur)){del(fs.doc(db,...base,c,id));delete sh[id]}}
+  if(SY.first._betrieb&&store.betrieb){const j=JSON.stringify(store.betrieb);if(shadow._betrieb!==j){put(fs.doc(db,...base,"meta","betrieb"),store.betrieb);shadow._betrieb=j}}
+  if(n){saveShadow();syncSetState(navigator.onLine?"ausstehend":"offline")}}
+let pushT=null;function syncPush(){clearTimeout(pushT);pushT=setTimeout(syncPushNow,60)}
+function writeLocal(){try{localStorage.setItem(KEY,JSON.stringify(store))}catch(e){}}
+function reconcile(c,remote){
+  const local=store[c]||{},sh=shadow[c]||{},out={};
+  for(const id in remote){const l=local[id];
+    if(l&&JSON.stringify(l)!==sh[id]&&(l.geaendert||"")>(remote[id].geaendert||""))out[id]=l;else out[id]=remote[id]}
+  for(const id in local)if(!(id in remote)&&!(id in sh))out[id]=local[id];
+  store[c]=out;shadow[c]={};for(const id in remote)shadow[c][id]=JSON.stringify(remote[id])}
+function syncAttach(){
+  const{fs,db}=SY.fb;const base=["users",SY.uid];SY.first={};
+  for(const c of SYNC_C){
+    SY.unsub.push(fs.onSnapshot(fs.collection(db,...base,c),{includeMetadataChanges:true},snap=>{
+      const remote={};snap.docs.forEach(d=>{remote[d.id]=d.data()});
+      if(!SY.first[c]){if(snap.metadata.fromCache&&navigator.onLine&&!SY.cacheOk)return;reconcile(c,remote);SY.first[c]=true;writeLocal();refresh();syncPush()}
+      else{const changed=JSON.stringify(store[c])!==JSON.stringify(remote);store[c]=remote;if(!snap.metadata.hasPendingWrites){shadow[c]={};for(const id in remote)shadow[c][id]=JSON.stringify(remote[id]);saveShadow()}if(changed){writeLocal();refresh()}}
+      syncStatus(snap.metadata)},e=>{console.warn(e);syncSetState("fehler")}));}
+  SY.unsub.push(fs.onSnapshot(fs.doc(db,...base,"meta","betrieb"),{includeMetadataChanges:true},snap=>{
+    const r=snap.exists()?snap.data():null;
+    if(!SY.first._betrieb){if(snap.metadata.fromCache&&navigator.onLine&&!SY.cacheOk)return;
+      if(r&&(!store.betrieb||JSON.stringify(store.betrieb)===shadow._betrieb||(r.geaendert||"")>=(store.betrieb.geaendert||"")))store.betrieb=r;
+      shadow._betrieb=r?JSON.stringify(r):undefined;SY.first._betrieb=true;writeLocal();refresh();syncPush()}
+    else if(r&&JSON.stringify(r)!==JSON.stringify(store.betrieb)){store.betrieb=r;if(!snap.metadata.hasPendingWrites)shadow._betrieb=JSON.stringify(r);writeLocal();refresh()}},e=>{console.warn(e)}));
+  // offline gestartet: nach kurzer Wartezeit auch Cache-Stand akzeptieren
+  setTimeout(()=>{SY.cacheOk=true},4000);
+}
+const pend={};function syncStatus(md){pend.p=md.hasPendingWrites;syncSetState(!navigator.onLine?"offline":md.hasPendingWrites?"ausstehend":"ok")}
+addEventListener("online",()=>syncSetState(SY.uid?"ausstehend":"aus"));addEventListener("offline",()=>{if(SY.uid)syncSetState("offline")});
+async function syncStart(){
+  try{localStorage.setItem("herdenbuch-sync-on","1")}catch(e){}
+  syncSetState("verbinde");
+  try{const fb=await syncLoad();
+    fb.auth.onAuthStateChanged(fb.au,u=>{
+      SY.unsub.forEach(f=>{try{f()}catch(e){}});SY.unsub=[];SY.first={};
+      if(u){SY.uid=u.uid;SY.email=u.email||"";syncSetState(navigator.onLine?"verbinde":"offline");syncAttach()}
+      else{SY.uid=null;SY.email="";syncSetState("aus")}
+      if(!$("ov").classList.contains("open"))render()});
+  }catch(e){console.warn(e);syncSetState(navigator.onLine?"fehler":"offline")}}
+async function syncLogin(email,pw){const fb=await syncLoad();await fb.auth.signInWithEmailAndPassword(fb.au,email,pw)}
+async function syncLogout(){try{const fb=await syncLoad();await fb.auth.signOut(fb.au)}catch(e){}try{localStorage.removeItem("herdenbuch-sync-on")}catch(e){}SY.uid=null;syncSetState("aus");render()}
+function syncSheet(){
+  if(SY.uid){openSheet(`<h3>☁️ Synchronisierung</h3>
+    <div class="note" style="margin-top:8px">Angemeldet als <b>${esc(SY.email)}</b>.<br>Alle Änderungen werden automatisch zwischen deinen Geräten abgeglichen – auch offline Erfasstes, sobald wieder Internet da ist.</div>
+    <div style="margin:6px 0 14px">Status: ${syncBadge().replace('id="syncdot"','')}</div>
+    <button class="btn del" style="width:100%" id="slo">Abmelden</button>
+    <div style="color:var(--mute);font-size:12px;margin-top:6px">Beim Abmelden bleiben die Daten auf diesem Gerät erhalten, werden aber nicht mehr abgeglichen.</div>
+    <div class="acts"><button class="btn sec" id="cx">Schließen</button></div>`);
+    $("cx").onclick=closeSheet;$("slo").onclick=async()=>{await syncLogout();closeSheet();toast("Abgemeldet")};return}
+  openSheet(`<h3>☁️ Mit Cloud verbinden</h3>
+    <div class="note" style="margin-top:8px">Melde dich mit deinem Firebase-Zugang an. Danach haben PC und iPhone automatisch denselben Datenstand. Die Daten auf diesem Gerät werden dabei hochgeladen und mit der Cloud zusammengeführt.</div>
+    <form id="sf"><label>E-Mail</label><input type="email" id="se" autocomplete="username" required>
+    <label>Passwort</label><input type="password" id="sp" autocomplete="current-password" required>
+    <div id="serr" style="color:var(--danger);font-size:14px;min-height:20px;margin-top:8px"></div>
+    <div class="acts"><button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn" id="sgo">Anmelden</button></div></form>`);
+  $("cx").onclick=closeSheet;
+  $("sf").onsubmit=async ev=>{ev.preventDefault();$("sgo").disabled=true;$("serr").textContent="";
+    try{if(!SY.fb)await syncStart();await syncLogin($("se").value.trim(),$("sp").value);closeSheet();toast("Angemeldet – Daten werden abgeglichen")}
+    catch(e){const c=(e&&e.code)||"";$("serr").textContent=c.includes("invalid")||c.includes("wrong-password")||c.includes("user-not-found")?"E-Mail oder Passwort falsch":c.includes("network")||!navigator.onLine?"Keine Internetverbindung – für die erste Anmeldung wird Internet benötigt":c.includes("too-many")?"Zu viele Versuche – bitte kurz warten":"Anmeldung fehlgeschlagen ("+(c||e.message||e)+")";$("sgo").disabled=false}};
+}
+
 refresh();lockInit();
+try{if(localStorage.getItem("herdenbuch-sync-on"))syncStart()}catch(e){}
 </script>
 <script>if("serviceWorker" in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});</script>
 </body>
