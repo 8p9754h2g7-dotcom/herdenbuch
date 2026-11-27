@@ -115,13 +115,19 @@ header h1{flex-wrap:wrap}
 .ii{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none;font-size:16px}
 .ii-r{background:#fcebeb}.ii-y{background:#faeeda}.ii-g{background:#eaf3de}
 @media (prefers-color-scheme:dark){.ii-r{background:#4a2222}.ii-y{background:#4a3d1e}.ii-g{background:#24361b}}
-.qa{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.qa{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .qb{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 2px;font:inherit;font-size:12px;font-weight:600;color:var(--ink);cursor:pointer}
 .qb span{display:block;font-size:22px;margin-bottom:2px}.qb.on{background:var(--acc);border-color:var(--acc);color:#fff}
 .hsel{width:auto;padding:4px 28px 4px 10px;font-size:14px;font-weight:700;border-radius:999px;border:1.5px solid var(--acc);color:var(--acc-d)}
 .hpill{display:inline-block;background:rgba(255,255,255,.14);border-radius:999px;padding:3px 10px;cursor:pointer}.hpill #syncdot{color:#e3f0da!important}
 .card.ewe.cmp{padding:9px 12px;margin-bottom:8px}.card.ewe.cmp .tag{min-width:50px;height:50px;font-size:14px}
 .card.ewe.cmp .name{font-size:15px}.card.ewe.cmp .sub{font-size:13px}
+.lmseg4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}.lmseg4 .chip{font-size:12px;padding:6px 2px;font-weight:600;text-align:center;line-height:1.2}.lmseg4 .chip b{display:block;font-size:15px}
+.ohr{background:var(--chip);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600}
+.merk{font-size:13px;color:#8a5a00;background:#faeeda;border-radius:8px;padding:4px 8px;margin-top:4px;cursor:pointer}
+@media (prefers-color-scheme:dark){.merk{background:#4a3d1e;color:#f0d9a0}}
+.pinbtn{border:0;background:var(--chip);border-radius:10px;width:38px;height:38px;font-size:17px;cursor:pointer;flex:none;align-self:flex-start}
+.okbtn{border:1.5px solid var(--acc);background:var(--card);color:var(--acc);border-radius:50%;width:34px;height:34px;font-size:16px;font-weight:700;cursor:pointer;flex:none}
 /* ===== Design: Grünland ===== */
 :root{
   --bg:#eef3e6;--card:#ffffff;--ink:#1f2d1a;--mute:#5f6f55;--line:#d5e0c8;
@@ -185,7 +191,7 @@ const bockLabel=x=>x.name?`${x.name} (${x.nr})`:x.nr;
 function defaultBock(){const bs=S.schafe.filter(x=>isBock(x)&&x.status!=="abgegangen");if(!bs.length)return"";if(bs.length===1)return bs[0].name||bs[0].nr;
   const last=S.lamm.slice().sort((a,b)=>(b.datum||"").localeCompare(a.datum||"")).find(l=>l.bock);return last?last.bock:(bs[0].name||bs[0].nr)}
 const istMutter=s=>s&&s.typ!=="Bock"&&s.status!=="abgegangen";
-const S={felder:[],ernte:[],kunden:[],med:[],fin:[],tab:"home",beh:[],tb:[],db:null,schafe:[],lamm:[],loaded:{s:false,l:false},err:null,view:"list",sel:null,q:"",filter:"alle",readonly:false};
+const S={merk:[],felder:[],ernte:[],kunden:[],med:[],fin:[],tab:"home",beh:[],tb:[],db:null,schafe:[],lamm:[],loaded:{s:false,l:false},err:null,view:"list",sel:null,q:"",filter:"alle",readonly:false};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmtD=d=>{if(!d)return"–";const [y,m,t]=d.split("-");return t?`${t}.${m}.${y}`:d};
@@ -273,6 +279,7 @@ function detailHTML(){
     const e=$("ed");if(e)e.onclick=()=>eweForm(s);
     const a=$("al");if(a)a.onclick=()=>lammForm(s);
     const ab=$("ab");if(ab)ab.onclick=()=>behForm(null,s.id);
+    const amk=$("amk");if(amk)amk.onclick=()=>merkForm(null,{tierArt:"schaf",tierId:s.id});const mb=$("mkbox");if(mb)bindMerk(mb);
     document.querySelectorAll("[data-b]").forEach(x=>x.onclick=()=>behForm(S.beh.find(y=>y.id===x.dataset.b)));
     document.querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>lammForm(s,S.lamm.find(x=>x.id===b.dataset.l)));
   });
@@ -308,9 +315,11 @@ function detailHTML(){
     ${l.length?l.map(x=>`<div class="card" ${ro?"":`data-l="${esc(x.id)}" style="cursor:pointer"`}>
       <div style="display:flex;justify-content:space-between;font-weight:600"><span>${fmtD(x.datum)}</span><span>${(x.laemmer||[]).length} ${(x.laemmer||[]).length===1?"Lamm":"Lämmer"}</span></div>
       <div class="sub" style="color:var(--mute);font-size:14px">${x.bock?"Bock: "+esc(x.bock)+" · ":""}${esc(x.verlauf||"")}</div>
-      ${(x.laemmer||[]).map(y=>`<div class="lamb">${y.sex==="m"?"♂ männlich":y.sex==="w"?"♀ weiblich":"?"}${y.nr?" · "+esc(y.nr):""}${y.gewicht?" · "+esc(y.gewicht)+" kg":""} · <span style="color:${y.status==="lebend"?"var(--acc)":"var(--danger)"}">${esc(y.status||"")}</span>${y.bem?`<div style="color:var(--mute);font-size:13px">${esc(y.bem)}</div>`:""}</div>`).join("")}
+      ${(x.laemmer||[]).map(y=>`<div class="lamb">${y.sex==="m"?"♂ männlich":y.sex==="w"?"♀ weiblich":"?"}${y.nr?" · "+esc(y.nr):""}${y.gewicht?" · "+esc(y.gewicht)+" kg":""} · <span style="color:${y.status==="lebend"?"var(--acc)":"var(--danger)"}">${esc(y.status||"")}</span>${y.abgesetzt&&(y.status||"lebend")==="lebend"?` · <span style="color:#3d5a80">abgesetzt ${fmtD(y.abgesetzt)}</span>`:""}${y.bem?`<div style="color:var(--mute);font-size:13px">${esc(y.bem)}</div>`:""}${merkFor("lamm",y.id||"").filter(n=>!n.erledigt).map(n=>`<div class="merk">📌 ${fmtD(n.datum).slice(0,6)} ${esc(n.text)}</div>`).join("")}</div>`).join("")}
       ${x.notiz?`<div style="color:var(--mute);font-size:14px;margin-top:6px;white-space:pre-wrap">${esc(x.notiz)}</div>`:""}
     </div>`).join(""):`<div class="empty">Noch keine Ablammung erfasst.</div>`}
+    <h2>📌 Merkzettel ${ro?"":`<button class="btn sm" id="amk">+ Eintrag</button>`}</h2>
+    ${(()=>{const ms=merkFor("schaf",s.id);return ms.length?`<div class="card" style="padding:0 12px" id="mkbox">${merkListe(ms,{ohneTier:true})}</div>`:`<div class="empty" style="padding:14px">Keine Einträge.</div>`})()}
     <h2>Behandlungen ${ro?"":`<button class="btn sm" id="ab">+ Behandlung</button>`}</h2>
     ${(()=>{const bs=behFor(s.id);return bs.length?bs.map(behCard).join(""):`<div class="empty">Noch keine Behandlung erfasst.</div>`})()}
   </main>`;
@@ -385,35 +394,106 @@ function erloesMap(jahr){const m={};for(const f of S.fin){if(f.art!=="ein"||!(f.
 function erloesSchaf(sid,jahr){const m=erloesMap(jahr);let sum=0,n=0;for(const l of S.lamm.filter(x=>x.schafId===sid))(l.laemmer||[]).forEach((y,i)=>{const e=m[y.id||l.id+"_"+i];if(e){sum+=e.sum;n++}});return{sum,n}}
 function lammLabel(y){return `${y.nr?esc(y.nr):"ohne Ohrmarke"} · ${y.sex==="m"?"♂":y.sex==="w"?"♀":"?"} · Mutter ${y.mutter?esc(y.mutter.nr):"?"} · geb. ${fmtD(y.datum)}`}
 function lebendeLaemmer(){return alleLaemmer().filter(y=>y.status==="lebend")}
+const LGRP={mutter:["Bei Mutter","#3f7a2e"],abgesetzt:["Abgesetzt","#3d5a80"],verkauft:["Verkauft","#b8862f"],tot:["Verendet","#b23b2b"]};
+const lGrp=y=>{const st=y.status||"lebend";return st==="lebend"?(y.abgesetzt?"abgesetzt":"mutter"):statGrp(st)};
+const tageSeit=d=>Math.round((new Date(today())-new Date(d))/864e5);
 function lmHTML(){
-  const em=erloesMap();S.lmf=S.lmf||"alle";S.lms=S.lms||"lebend";
+  const em=erloesMap();S.lmf=S.lmf||"alle";if(!LGRP[S.lms])S.lms="mutter";
   const roh=alleLaemmer(),cur=new Date().getFullYear()+"";const jahre=[...new Set([cur,...roh.map(y=>(y.datum||"").slice(0,4)).filter(y=>/^\d{4}$/.test(y))])].sort().reverse();
   const jahr=S.lyear&&(S.lyear==="alle"||jahre.includes(S.lyear))?S.lyear:"alle";
   const alle=jahr==="alle"?roh:roh.filter(y=>(y.datum||"").startsWith(jahr));
-  const cnt=g=>alle.filter(y=>statGrp(y.status)===g).length;
-  const grp=alle.filter(y=>statGrp(y.status)===S.lms);
+  const cnt=g=>alle.filter(y=>lGrp(y)===g).length;
+  const grp=alle.filter(y=>lGrp(y)===S.lms);
   const lq=(S.lq||"").trim().toLowerCase().replace(/\s+/g,"");
-  const list=grp.filter(y=>(S.lmf==="alle"||y.sex===S.lmf)&&(!lq||[y.nr,y.mutter&&y.mutter.nr,y.bock].join(" ").toLowerCase().replace(/\s+/g,"").includes(lq)));
+  let list=grp.filter(y=>(S.lmf==="alle"||y.sex===S.lmf)&&(!lq||[y.nr,y.mutter&&y.mutter.nr,y.bock].join(" ").toLowerCase().replace(/\s+/g,"").includes(lq)));
+  if(S.lms==="abgesetzt")list.sort((a,b)=>(a.abgesetzt||"").localeCompare(b.abgesetzt||"")||String(a.nr||"").localeCompare(String(b.nr||""),"de",{numeric:true}));
   const w=grp.filter(y=>y.sex==="w").length,m=grp.filter(y=>y.sex==="m").length;
-  const badge=st=>{const c=st==="lebend"?"#3f7a2e":st==="verkauft"?"#b8862f":"#b23b2b";return `<span style="display:inline-block;background:${c};color:#fff;font-size:12px;font-weight:700;border-radius:6px;padding:2px 8px;margin-right:6px;vertical-align:2px">${esc(st.charAt(0).toUpperCase()+st.slice(1))}</span>`};
-  const leer={lebend:"Keine lebenden Lämmer erfasst.<br>Lämmer trägst du beim Mutterschaf unter „+ Ablammung“ ein.",verkauft:"Noch keine verkauften Lämmer.",tot:"Keine verendeten oder tot geborenen Lämmer."}[S.lms];
-  return `<header><h1>🐣 Lämmer <small>${cnt("lebend")} lebend${jahr==="alle"?"":" · Jg. "+jahr}</small><button class="btn sec sm" id="dm">💾</button></h1>
+  const badge=y=>{const g=lGrp(y);const t=g==="tot"?(y.status==="tot geboren"?"Tot geboren":"Verendet"):LGRP[g][0];return `<span style="display:inline-block;background:${LGRP[g][1]};color:#fff;font-size:12px;font-weight:700;border-radius:6px;padding:2px 8px;margin-right:6px;vertical-align:2px">${t}</span>`};
+  const leer={mutter:"Keine Lämmer bei den Müttern.<br>Lämmer trägst du beim Mutterschaf unter „+ Ablammung“ ein.",abgesetzt:"Noch keine Lämmer abgesetzt.<br>Im Reiter „Bei Mutter“ auf „Lämmer absetzen“ tippen.",verkauft:"Noch keine verkauften Lämmer.",tot:"Keine verendeten oder tot geborenen Lämmer."}[S.lms];
+  const leb=alle.filter(y=>(y.status||"lebend")==="lebend").length;
+  const abg=grp.filter(y=>y.abgesetzt),dsch=abg.length?Math.round(abg.reduce((a,y)=>a+tageSeit(y.abgesetzt),0)/abg.length):0;
+  return `<header><h1>🐣 Lämmer <small>${leb} lebend${jahr==="alle"?"":" · Jg. "+jahr}</small><button class="btn sec sm" id="dm">💾</button></h1>
     <input id="lq" type="search" placeholder="Suche: Lammnummer oder Mutterschaf …" value="${esc(S.lq||"")}">
-    <div class="seg lmseg">${Object.entries(LSTAT).map(([k,[t]])=>`<button class="chip ${S.lms===k?"on":""}" data-ls="${k}">${t} (${cnt(k)})</button>`).join("")}</div>
+    <div class="lmseg4">${Object.entries(LGRP).map(([k,[t]])=>`<button class="chip ${S.lms===k?"on":""}" data-ls="${k}">${t}<b>${cnt(k)}</b></button>`).join("")}</div>
     <div class="chips">${[["alle",`Alle (${grp.length})`],["w",`♀ weiblich (${w})`],["m",`♂ männlich (${m})`]].map(([k,t])=>`<button class="chip ${S.lmf===k?"on":""}" data-lf="${k}">${t}</button>`).join("")}</div></header><main>
   <div class="yearbar"><span>📅 Geburtsjahrgang</span><select id="lyr"><option value="alle" ${jahr==="alle"?"selected":""}>Alle Jahre</option>${jahre.map(y=>`<option ${y===jahr?"selected":""}>${y}</option>`).join("")}</select></div>
-  ${list.length?list.map(y=>`<div class="card ewe" data-lm="${esc(y.lid)}">
+  ${S.lms==="mutter"&&S.db&&grp.length?`<button class="btn" id="absetzen" style="width:100%;margin-bottom:12px">🐣 ➜ 🏠 Lämmer absetzen</button>`:""}
+  ${S.lms==="abgesetzt"&&grp.length?`<div class="card" style="border:2px solid #3d5a80">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:17px">${grp.length} Lämmer im Absetzstall</b><span style="color:var(--mute);font-size:13px">${w} ♀ · ${m} ♂</span></div>
+    <div style="color:var(--mute);font-size:13px;margin:2px 0 8px">abgesetzt seit Ø ${dsch} Tagen</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">${list.map(y=>`<span class="ohr">${y.sex==="m"?"♂":y.sex==="w"?"♀":""} ${esc(y.nr||"o. Ohrmarke")}</span>`).join("")}</div>
+    <button class="btn sec sm" id="ohrcopy" style="margin-top:10px">📋 Ohrmarken kopieren</button></div>`:""}
+  ${list.length?list.map(y=>{const mk=merkFor("lamm",y.id).filter(n=>!n.erledigt);return `<div class="card ewe" data-lm="${esc(y.lid)}">
     <div class="tag ${y.sex==="m"?"fuchs":""}" style="font-size:22px">${y.sex==="m"?"♂":y.sex==="w"?"♀":"?"}</div>
-    <div class="info"><div class="name">${badge(y.status)}${y.nr?esc(y.nr):"ohne Ohrmarke"} <span style="font-weight:400;color:var(--mute)">· ${y.sex==="m"?"männlich":y.sex==="w"?"weiblich":"Geschlecht offen"}</span></div>
-    <div class="sub">${y.status==="lebend"?`<b style="color:var(--ink)">${lammAlter(y.datum)}</b> · `:""}geb. ${fmtD(y.datum)}${y.gewicht?" · "+esc(y.gewicht)+" kg":""}</div>
+    <div class="info"><div class="name">${badge(y)}${y.nr?esc(y.nr):"ohne Ohrmarke"} <span style="font-weight:400;color:var(--mute)">· ${y.sex==="m"?"männlich":y.sex==="w"?"weiblich":"Geschlecht offen"}</span></div>
+    <div class="sub">${(y.status||"lebend")==="lebend"?`<b style="color:var(--ink)">${lammAlter(y.datum)}</b> · `:""}geb. ${fmtD(y.datum)}${y.gewicht?" · "+esc(y.gewicht)+" kg":""}</div>
+    ${y.abgesetzt&&(y.status||"lebend")==="lebend"?`<div class="sub" style="color:#3d5a80;font-weight:600">🏠 abgesetzt am ${fmtD(y.abgesetzt)} · seit ${tageSeit(y.abgesetzt)} Tagen</div>`:""}
     <div class="sub">Mutter: ${y.mutter?esc(y.mutter.nr+(y.mutter.name?" "+y.mutter.name:"")):"(gelöscht)"}${y.bock?" · Vater: "+esc(y.bock):""}</div>
-    ${y.bem?`<div class="med">${esc(y.bem)}</div>`:""}${(()=>{const bh=lammBehFor(y.id)[0];return bh?`<div class="med">💊 ${fmtD(bh.datum)} · ${esc(bh.medikament)} ${wzBadge(bh)}</div>`:""})()}${em[y.id]?`<div class="med" style="color:var(--acc);font-weight:600">💶 Erlös ${eur(em[y.id].sum)} (${fmtD(em[y.id].fins[0].datum)})</div>`:""}</div></div>`).join(""):`<div class="empty">${grp.length?"Keine Treffer"+(lq?" für „"+esc(S.lq)+"“":"")+".":leer}</div>`}
-  ${S.lms==="lebend"?`<div class="note">Tipp: Antippen öffnet die Ablammung – dort kannst du den Status z. B. auf „verkauft“ ändern, dann wandert das Lamm in den Reiter „Verkauft“.</div>`:""}
+    ${mk.map(n=>`<div class="merk" data-mk="${esc(n.id)}">📌 ${fmtD(n.datum).slice(0,6)} ${esc(n.text)}</div>`).join("")}
+    ${y.bem?`<div class="med">${esc(y.bem)}</div>`:""}${(()=>{const bh=lammBehFor(y.id)[0];return bh?`<div class="med">💊 ${fmtD(bh.datum)} · ${esc(bh.medikament)} ${wzBadge(bh)}</div>`:""})()}${em[y.id]?`<div class="med" style="color:var(--acc);font-weight:600">💶 Erlös ${eur(em[y.id].sum)} (${fmtD(em[y.id].fins[0].datum)})</div>`:""}</div>
+    ${S.db&&(y.status||"lebend")==="lebend"?`<button class="pinbtn" data-pin="${esc(y.id)}" aria-label="Merkzettel">📌</button>`:""}</div>`}).join(""):`<div class="empty">${grp.length?"Keine Treffer"+(lq?" für „"+esc(S.lq)+"“":"")+".":leer}</div>`}
+  ${S.lms==="mutter"&&grp.length?`<div class="note">Tipp: Antippen öffnet die Ablammung – dort kannst du Status oder Absetzdatum ändern. 📌 legt einen Merkzettel-Eintrag an (z. B. Durchfall, schwach).</div>`:""}
   </main>`}
 function bindLm(){const lqi=$("lq");if(lqi)lqi.oninput=()=>{S.lq=lqi.value;const p=lqi.selectionStart;render();const n=$("lq");n.focus();n.setSelectionRange(p,p)};const ly=$("lyr");if(ly)ly.onchange=()=>{S.lyear=ly.value;render()};
   document.querySelectorAll("[data-ls]").forEach(b=>b.onclick=()=>{S.lms=b.dataset.ls;S.lmf="alle";render()});
   document.querySelectorAll("[data-lf]").forEach(b=>b.onclick=()=>{S.lmf=b.dataset.lf;render()});
   document.querySelectorAll("[data-lm]").forEach(b=>b.onclick=()=>{const l=S.lamm.find(x=>x.id===b.dataset.lm);const m=l&&S.schafe.find(x=>x.id===l.schafId);if(l&&m&&S.db)lammForm(m,l)});
+  document.querySelectorAll("[data-pin]").forEach(b=>b.onclick=e=>{e.stopPropagation();merkForm(null,{tierArt:"lamm",tierId:b.dataset.pin})});
+  document.querySelectorAll("#app [data-mk]").forEach(b=>b.onclick=e=>{e.stopPropagation();merkForm(S.merk.find(x=>x.id===b.dataset.mk))});
+  const ab=$("absetzen");if(ab)ab.onclick=absetzForm;
+  const oc=$("ohrcopy");if(oc)oc.onclick=async()=>{const t=[...document.querySelectorAll(".ohr")].map(x=>x.textContent.replace(/[♀♂]/g,"").trim()).join("\n");try{await navigator.clipboard.writeText(t);toast("Ohrmarken kopiert")}catch(e){toast("Kopieren nicht möglich")}};
+}
+async function setLammFelder(ids,patch){for(const l of S.lamm){let ch=false;const ls=(l.laemmer||[]).map((y,i)=>{const id=y.id||l.id+"_"+i;if(ids.includes(id)){ch=true;return{...y,id,...patch}}return{...y,id}});
+  if(ch){const{id,...rest}=l;await S.db.doc("lammungen/"+l.id).set({...rest,laemmer:ls,geaendert:new Date().toISOString()})}}}
+function absetzForm(){
+  const cand=alleLaemmer().filter(y=>lGrp(y)==="mutter").sort((a,b)=>(a.datum||"").localeCompare(b.datum||""));const sel=new Set();let q="";
+  openSheet(`<h3>Lämmer absetzen</h3><form id="f">
+    <label>Abgesetzt am *</label><input type="date" name="datum" required value="${today()}">
+    <label>Welche Lämmer? <span style="font-weight:400">(älteste zuerst)</span></label>
+    <div class="row" style="align-items:center"><input id="aq" type="search" placeholder="Ohrmarke suchen …"><button type="button" class="btn sec sm" id="aall" style="flex:none">Alle sichtbaren</button></div>
+    <div id="al2" class="chklist" style="max-height:45vh"></div><div id="an" style="color:var(--mute);font-size:13px;margin-top:6px"></div>
+    <div class="acts"><button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Absetzen</button></div></form>`);
+  const vis=()=>cand.filter(y=>!q||[y.nr,y.mutter&&y.mutter.nr].join(" ").toLowerCase().replace(/\s+/g,"").includes(q));
+  const draw=()=>{$("al2").innerHTML=vis().map(y=>`<label class="ck"><input type="checkbox" data-a="${esc(y.id)}" ${sel.has(y.id)?"checked":""}><span>${lammLabel(y)} <span style="color:var(--mute);font-size:12px">· ${lammAlter(y.datum)}</span></span></label>`).join("")||`<div class="ckleer">Keine Lämmer.</div>`;
+    $("an").textContent=sel.size+" ausgewählt";document.querySelectorAll("[data-a]").forEach(c=>c.onchange=()=>{c.checked?sel.add(c.dataset.a):sel.delete(c.dataset.a);$("an").textContent=sel.size+" ausgewählt"})};
+  draw();$("cx").onclick=closeSheet;$("aq").oninput=e=>{q=e.target.value.toLowerCase().replace(/\s+/g,"");draw()};$("aall").onclick=()=>{vis().forEach(y=>sel.add(y.id));draw()};
+  $("f").onsubmit=async ev=>{ev.preventDefault();if(!sel.size){toast("Bitte Lämmer auswählen");return}const d=ev.target.datum.value;
+    try{await setLammFelder([...sel],{abgesetzt:d});closeSheet();S.lms="abgesetzt";render();toast(`${sel.size} Lämmer abgesetzt`)}catch(x){fail(x)}};
+}
+
+/* ---------- Merkzettel ---------- */
+const MERK_VORSCHLAG=["Durchfall","sehr schwach","lahmt","Husten","frisst schlecht","Euter auffällig","Nasenausfluss","beobachten"];
+const merkFor=(art,id)=>S.merk.filter(n=>n.tierArt===art&&n.tierId===id).sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
+function merkTier(n){if(n.tierArt==="schaf"){const s=S.schafe.find(x=>x.id===n.tierId);return{i:"🐑",t:s?esc(s.nr)+(s.name?" · "+esc(s.name):""):"(gelöscht)",s}}
+  const y=lammById(n.tierId);return{i:"🐣",t:y?"Lamm "+esc(y.nr||"o. Ohrmarke")+(y.mutter?` <span style="font-weight:400;color:var(--mute);font-size:13px">(Mutter ${esc(kurzNr(y.mutter.nr))})</span>`:""):"Lamm (gelöscht)",y}}
+function merkListe(list,opts){return list.map(n=>{const t=merkTier(n);return `<div class="imp" data-mk="${esc(n.id)}" style="${n.erledigt?"opacity:.55":""}"><span class="ii ii-y">${t.i}</span>
+  <div style="flex:1;min-width:0">${opts&&opts.ohneTier?"":`<div style="font-weight:600">${t.t}</div>`}<div style="${n.erledigt?"text-decoration:line-through;":""}${opts&&opts.ohneTier?"font-weight:600":"font-size:14px"}">${esc(n.text)}</div><div class="ks">${fmtD(n.datum)}${n.erledigt?" · erledigt"+(n.erledigtAm?" "+fmtD(n.erledigtAm):""):" · "+vor(n.datum)}</div></div>
+  ${!n.erledigt&&S.db?`<button class="okbtn" data-ok="${esc(n.id)}" aria-label="Erledigt">✓</button>`:""}</div>`}).join("")}
+function bindMerk(root){(root||document).querySelectorAll(".imp[data-mk]").forEach(x=>x.onclick=()=>merkForm(S.merk.find(y=>y.id===x.dataset.mk)));
+  (root||document).querySelectorAll("[data-ok]").forEach(b=>b.onclick=async e=>{e.stopPropagation();const n=S.merk.find(y=>y.id===b.dataset.ok);if(!n)return;const{id,...rest}=n;
+    try{await S.db.doc("merkzettel/"+id).set({...rest,erledigt:true,erledigtAm:today(),geaendert:new Date().toISOString()});toast("Als erledigt markiert")}catch(x){fail(x)}})}
+function merkForm(n,pre){const neu=!n;n=n||{datum:today(),erledigt:false,...(pre||{})};let tier=n.tierId?{art:n.tierArt,id:n.tierId}:null,q="";
+  const opts=()=>[...S.schafe.filter(s=>s.status!=="abgegangen").map(s=>({art:"schaf",id:s.id,nr:s.nr,lbl:`🐑 <b>${esc(s.nr)}</b> <span style="color:var(--mute);font-size:13px">${esc(s.rasse||"")}${isBock(s)?" · Bock":""}</span>`})),
+    ...alleLaemmer().filter(y=>(y.status||"lebend")==="lebend").map(y=>({art:"lamm",id:y.id,nr:(y.nr||"")+" "+(y.mutter?y.mutter.nr:""),lbl:`🐣 ${lammLabel(y)}`}))];
+  openSheet(`<h3>${neu?"📌 Merkzettel-Eintrag":"📌 Merkzettel bearbeiten"}</h3><form id="f">
+    <label>Tier *</label><div id="tsel"></div>
+    <label>Datum *</label><input type="date" name="datum" required value="${esc(n.datum)}">
+    <label>Beobachtung *</label><textarea name="text" required placeholder="z. B. starker Durchfall, sehr schwach">${esc(n.text)}</textarea>
+    <div class="chips">${MERK_VORSCHLAG.map(v=>`<button type="button" class="chip" data-mv="${esc(v)}">${esc(v)}</button>`).join("")}</div>
+    ${neu?"":`<label class="ck" style="border:0;margin-top:8px"><input type="checkbox" id="mer" ${n.erledigt?"checked":""}><span>Erledigt / wieder in Ordnung</span></label>`}
+    <div class="acts">${neu?"":`<button type="button" class="btn del" id="del">Löschen</button>`}<button type="button" class="btn sec" id="cx">Abbrechen</button><button class="btn">Speichern</button></div></form>`);
+  const drawT=()=>{const box=$("tsel");if(tier){const o=opts().find(x=>x.art===tier.art&&x.id===tier.id);const t=merkTier({tierArt:tier.art,tierId:tier.id});
+      box.innerHTML=`<div class="card" style="display:flex;justify-content:space-between;align-items:center;margin:0;padding:10px 12px"><span>${o?o.lbl:t.i+" "+t.t}</span><button type="button" class="btn sec sm" id="tch">ändern</button></div>`;$("tch").onclick=()=>{tier=null;drawT()};return}
+    const l=opts().filter(x=>!q||x.nr.toLowerCase().replace(/\s+/g,"").includes(q)).slice(0,60);
+    box.innerHTML=`<input id="tq" type="search" placeholder="Ohrmarke von Schaf oder Lamm …" value="${esc(q)}"><div class="chklist" style="max-height:35vh">${l.map(x=>`<div class="ck" data-t="${x.art}:${esc(x.id)}">${x.lbl}</div>`).join("")||`<div class="ckleer">Keine Treffer.</div>`}</div>`;
+    const tq=$("tq");tq.oninput=()=>{q=tq.value.toLowerCase().replace(/\s+/g,"");const p=tq.selectionStart;drawT();const n2=$("tq");n2.focus();n2.setSelectionRange(p,p)};
+    document.querySelectorAll("[data-t]").forEach(x=>x.onclick=()=>{const[a,...r]=x.dataset.t.split(":");tier={art:a,id:r.join(":")};drawT()})};
+  drawT();$("cx").onclick=closeSheet;
+  document.querySelectorAll("[data-mv]").forEach(b=>b.onclick=()=>{const ta=document.querySelector("[name=text]");ta.value=(ta.value.trim()?ta.value.trim()+", ":"")+b.dataset.mv});
+  if(!neu)armDelete($("del"),async()=>{try{await S.db.doc("merkzettel/"+n.id).delete();closeSheet();toast("Gelöscht")}catch(x){fail(x)}});
+  $("f").onsubmit=async ev=>{ev.preventDefault();if(!tier){toast("Bitte ein Tier auswählen");return}const d=Object.fromEntries(new FormData(ev.target));
+    const er=neu?false:$("mer").checked;const body={tierArt:tier.art,tierId:tier.id,datum:d.datum,text:String(d.text).trim(),erledigt:er,erledigtAm:er?(n.erledigtAm||today()):"",geaendert:new Date().toISOString()};
+    try{if(neu)await S.db.collection("merkzettel").add(body);else await S.db.doc("merkzettel/"+n.id).set(body);closeSheet();toast("Gespeichert")}catch(x){fail(x)}};
 }
 
 /* ---------- Betrieb ---------- */
@@ -621,6 +701,7 @@ function homeHTML(){
   const fy=S.fin.filter(f=>(f.datum||"").startsWith(jahr)),ein=fy.filter(f=>f.art==="ein"&&f.kategorie!=="Privateinlage").reduce((a,f)=>a+(Number(f.betrag)||0),0),aus=fy.filter(f=>f.art==="aus").reduce((a,f)=>a+(Number(f.betrag)||0),0),erg=ein-aus;
   const kurzEur=n=>Math.round(n).toLocaleString("de-DE")+" €";
   // Heute wichtig
+  const offMerk=S.merk.filter(n=>!n.erledigt).sort((a,b)=>(b.datum||"").localeCompare(a.datum||""));
   const imp=[];
   for(const f of S.fin.filter(istOffen).sort((a,b)=>(a.datum||"").localeCompare(b.datum||""))){const d=Math.round((new Date(today())-new Date(f.datum))/864e5);
     imp.push({c:"y",i:"🧾",t:(f.art==="ein"?"Betrag fehlt: ":"Rechnung fehlt: ")+esc(f.text),s:[fmtD(f.datum),f.partner?esc(f.partner):"",d>=1?"seit "+d+(d===1?" Tag":" Tagen"):"heute erfasst"].filter(Boolean).join(" · "),a:`data-fin="${esc(f.id)}"`})}
@@ -630,7 +711,7 @@ function homeHTML(){
   if(unv)imp.push({c:"y",i:"⚠️",t:"Stammdaten unvollständig",s:`${unv} ${unv===1?"Tier":"Tiere"} – Angaben ergänzen`,a:'data-go="unv"'});
   const ohneNr=leb.filter(y=>!y.nr).length;if(ohneNr)imp.push({c:"y",i:"🏷️",t:"Lämmer ohne Ohrmarke",s:`${ohneNr} lebende${ohneNr===1?"s Lamm":" Lämmer"}`,a:'data-go="lm"'});
   const tbl={};for(const e of S.tb.slice().sort((a,b)=>(b.datum||"").localeCompare(a.datum||""))){const k=(e.taetigkeit||"").trim().toLowerCase();if(k&&!tbl[k])tbl[k]=e}
-  for(const e of Object.values(tbl).sort((a,b)=>(a.datum||"").localeCompare(b.datum||"")).slice(0,2)){const d=Math.round((new Date(today())-new Date(e.datum))/864e5);if(d>=7)imp.push({c:"g",i:"🧹",t:esc(e.taetigkeit),s:"zuletzt "+vor(e.datum),a:'data-go="tb"'})}
+
   // Lämmer je Monat
   const mon=Array(12).fill(0);for(const l of lj){const m=Number((l.datum||"").slice(5,7))-1;if(m>=0)mon[m]+=(l.laemmer||[]).length}
   const mx=Math.max(1,...mon),hi=mon.filter(v=>v).sort((a,b)=>b-a)[1]||mx;
@@ -652,8 +733,10 @@ function homeHTML(){
   </div>
   <div class="hsec">Offene Aufgaben${imp.length?` · ${imp.length}`:""}</div>
   <div class="card" style="padding:0 12px">${imp.length?imp.map(x=>`<div class="imp" ${x.a||""}><span class="ii ii-${x.c}">${x.i}</span><div style="flex:1;min-width:0"><div style="font-weight:600">${x.t}</div><div class="ks">${x.s}</div></div>${x.r?`<span style="font-size:12px;color:var(--danger);font-weight:600;white-space:nowrap">${x.r}</span>`:`<span style="color:var(--mute)">›</span>`}</div>`).join(""):`<div class="imp"><span class="ii ii-g">✅</span><div>Alles erledigt – keine offenen Punkte.</div></div>`}</div>
+  <div class="hsec" style="display:flex;justify-content:space-between;align-items:center"><span>📌 Merkzettel${offMerk.length?` · ${offMerk.length}`:""}</span>${S.db?`<button class="btn sec sm" id="mkadd" style="background:var(--card)">+ Eintrag</button>`:""}</div>
+  <div class="card" style="padding:0 12px" id="mkhome">${offMerk.length?merkListe(offMerk):`<div class="imp" style="cursor:default"><span class="ii ii-g">✅</span><div style="color:var(--mute)">Keine Auffälligkeiten notiert.</div></div>`}</div>
   <div class="hsec">Schnell erfassen</div>
-  <div class="qa">${S.db?`<button class="qb on" id="qaL"><span>🐣</span>Ablammung</button><button class="qb" id="qaB"><span>💊</span>Behandlung</button><button class="qb" id="qaT"><span>🧹</span>Stallbuch</button><button class="qb" id="qaF"><span>💶</span>Buchung</button>`:""}</div>
+  <div class="qa">${S.db?`<button class="qb on" id="qaL"><span>🐣</span>Ablammung</button><button class="qb" id="qaB"><span>💊</span>Behandlung</button><button class="qb" id="qaM"><span>📌</span>Merkzettel</button><button class="qb" id="qaT"><span>🧹</span>Stallbuch</button><button class="qb" id="qaF"><span>💶</span>Buchung</button>`:""}</div>
   <div class="hsec" style="display:flex;justify-content:space-between;align-items:center"><span>Lämmer je Monat</span><select id="hyr" class="hsel">${jahre.map(y=>`<option ${y===jahr?"selected":""}>${y}</option>`).join("")}</select></div>
   <div class="card" style="padding:12px 10px 6px"><svg width="100%" height="96" viewBox="0 0 300 96" aria-label="Lämmer je Monat">
     ${mon.map((v,i)=>{const hgt=v?Math.max(4,v/mx*62):2;const x=4+i*25;return `<rect x="${x}" y="${72-hgt}" width="18" height="${hgt}" rx="3" fill="${v&&v>=hi?"var(--acc)":v?"#97C459":"var(--chip)"}"/>${v?`<text x="${x+9}" y="${68-hgt}" text-anchor="middle" font-size="9" fill="var(--mute)">${v}</text>`:""}<text x="${x+9}" y="88" text-anchor="middle" font-size="10" fill="var(--mute)">${"JFMAMJJASOND"[i]}</text>`}).join("")}</svg>
@@ -671,7 +754,7 @@ function bindHome(){
   document.querySelectorAll(".imp[data-fin]").forEach(x=>x.onclick=()=>finForm(S.fin.find(y=>y.id===x.dataset.fin)));
   document.querySelectorAll("[data-go]").forEach(x=>x.onclick=()=>{const g=x.dataset.go;if(g==="unv"){S.tab="list";S.filter="unvollständig"}else S.tab=g;S.view="list";render();scrollTo(0,0)});
   const q=(id,f)=>{const e=$(id);if(e)e.onclick=f};
-  q("qaL",()=>waehleMutter());q("qaB",()=>behForm());q("qaT",()=>tbForm());q("qaF",()=>finForm());
+  q("qaL",()=>waehleMutter());q("qaM",()=>merkForm());q("mkadd",()=>merkForm());const mh=$("mkhome");if(mh)bindMerk(mh);q("qaB",()=>behForm());q("qaT",()=>tbForm());q("qaF",()=>finForm());
 }
 function waehleMutter(){
   const jahr=new Date().getFullYear()+"";const gel=new Set(S.lamm.filter(l=>(l.datum||"").startsWith(jahr)).map(l=>l.schafId));
@@ -752,7 +835,11 @@ function behForm(b,pre){
   const sel=new Set(b.schafIds||[]),lsel=new Set(b.lammIds||[]);let allE=!!b.alle,allL=!!b.alleL,q="";
   const medNames=[...new Set([...S.med.map(m=>m.name),...S.beh.map(x=>x.medikament)].filter(Boolean))].sort((a,c)=>a.localeCompare(c,"de"));
   openSheet(`<h3>${b.id?"Behandlung bearbeiten":"Neue Behandlung"}</h3><form id="f">
-    <label>Medikament *</label><input name="medikament" required list="ml" value="${esc(b.medikament)}" placeholder="aus Liste wählen oder eintippen"><datalist id="ml">${medNames.map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
+    <label>Medikament *</label>${(()=>{const liste=S.med.slice().sort((a,c)=>(a.name||"").localeCompare(c.name||"","de"));const ln=new Set(liste.map(m=>(m.name||"").trim().toLowerCase()));
+      const frueher=medNames.filter(v=>!ln.has(v.trim().toLowerCase()));const cur=(b.medikament||"").trim().toLowerCase();
+      return `<select id="msel"><option value="">– Medikament wählen –</option>${liste.length?`<optgroup label="Medikamentenliste">${liste.map(m=>`<option value="${esc(m.name)}" ${(m.name||"").trim().toLowerCase()===cur?"selected":""}>${esc(m.name)}${m.wzFleisch!==""&&m.wzFleisch!=null?" · "+esc(m.wzFleisch)+" Tage":""}</option>`).join("")}</optgroup>`:""}${frueher.length?`<optgroup label="Früher verwendet">${frueher.map(v=>`<option value="${esc(v)}" ${v.trim().toLowerCase()===cur?"selected":""}>${esc(v)}</option>`).join("")}</optgroup>`:""}<option value="__neu">✏️ Anderes Medikament eintippen …</option></select>
+      <input name="medikament" value="${esc(b.medikament)}" placeholder="Name des Medikaments" style="display:none;margin-top:8px">
+      ${liste.length?"":`<div style="font-size:12px;color:var(--mute);margin-top:4px">💡 Tipp: Lege deine Medikamente unter „📋 Medikamentenliste & Wartezeiten“ an – dann wird die Wartezeit automatisch berechnet.</div>`}`})()}
     <div id="mh" style="font-size:13px;color:var(--mute);margin-top:4px"></div>
     <div class="row"><div><label>Datum *</label><input type="date" name="datum" required value="${esc(b.datum)}"></div>
     <div><label>Wartezeit bis</label><input type="date" name="wartezeit" value="${esc(b.wartezeit)}"></div></div>
@@ -772,7 +859,10 @@ function behForm(b,pre){
     const t=Number(m.wzFleisch)||0;$("mh").innerHTML=`📋 Wartezeit Fleisch: <b>${t} Tage</b>${m.wzMilch?` · Milch ${esc(m.wzMilch)} Tage`:""}${m.dosierung?` · Dosierung: ${esc(m.dosierung)}`:""}`;
     if(!fDo.value&&m.dosierung)fDo.placeholder=m.dosierung;
     if(fD.value&&(force||!wzTouched)){fW.value=t>0?addDays(fD.value,t):"";wzTouched=false}};
-  fM.addEventListener("input",()=>calcWz(true));fM.addEventListener("change",()=>calcWz(true));fD.addEventListener("change",()=>calcWz(!wzTouched));calcWz(false);
+  fM.addEventListener("input",()=>calcWz(true));fM.addEventListener("change",()=>calcWz(true));
+  const ms=$("msel");const showFree=v=>{fM.style.display=v?"":"none"};
+  ms.onchange=()=>{if(ms.value==="__neu"){fM.value="";showFree(true);fM.focus()}else{fM.value=ms.value;showFree(false)}calcWz(true)};
+  if(b.medikament&&!ms.value){ms.value="__neu";showFree(true)}fD.addEventListener("change",()=>calcWz(!wzTouched));calcWz(false);
   const drawT=()=>{
     $("mAll").classList.toggle("on",allE);$("mAllL").classList.toggle("on",allL);
     const extra=[...sel].filter(id=>!aktive.some(a=>a.id===id)).map(id=>S.schafe.find(x=>x.id===id)).filter(Boolean);
@@ -791,7 +881,7 @@ function behForm(b,pre){
   $("mAll").onclick=()=>{allE=!allE;drawT()};$("mAllL").onclick=()=>{allL=!allL;drawT()};drawT();
   $("cx").onclick=closeSheet;
   if(b.id)armDelete($("del"),async()=>{try{await S.db.doc("behandlungen/"+b.id).delete();closeSheet();toast("Gelöscht")}catch(x){fail(x)}});
-  $("f").onsubmit=async ev=>{ev.preventDefault();const d=Object.fromEntries(new FormData(ev.target));for(const k in d)d[k]=String(d[k]).trim();
+  $("f").onsubmit=async ev=>{ev.preventDefault();if(!fM.value.trim()){toast("Bitte ein Medikament auswählen");return}const d=Object.fromEntries(new FormData(ev.target));for(const k in d)d[k]=String(d[k]).trim();
     d.alle=allE;d.alleL=allL;d.schafIds=allE?aktive.map(s=>s.id):[...sel];d.lammIds=allL?lebL.map(y=>y.id):[...lsel];
     if(!d.schafIds.length&&!d.lammIds.length){toast("Bitte mindestens ein Tier auswählen");return}
     d.geaendert=new Date().toISOString();
@@ -924,9 +1014,11 @@ function feldForm(f){const neu=!f;f=f||{besitz:"Eigentum"};const n=neu?0:S.ernte
 }
 
 /* ---------- Versionsbuch ---------- */
-const APP_VERSION="1.17";
+const APP_VERSION="1.19";
 const ONLINE_URL="https://raw.githubusercontent.com/8p9754h2g7-dotcom/herdenbuch/main/index.html";
 const CHANGELOG=[
+ ["1.19","27.11.2026",["Passwortschutz (App-Sperre) entfernt – die App startet direkt","Behandlung: Medikament als Auswahlliste (Dropdown) mit Wartezeit-Anzeige; „anderes Medikament“ weiterhin eintippbar"]],
+ ["1.18","27.11.2026",["📌 Merkzettel: Beobachtungen zu Mutterschafen und Lämmern (z. B. Durchfall, sehr schwach) – auf der Startseite, beim Tier und beim Lamm","Lämmer: neuer Reiter „Abgesetzt“ mit Ohrmarken-Übersicht, Absetzen mehrerer Lämmer auf einmal, Absetzdatum je Lamm","Stallbuch-Einträge erscheinen nicht mehr unter „Offene Aufgaben“","Schnell erfassen: Knopf „Merkzettel“"]],
  ["1.17","23.11.2026",["Buchungen ohne Betrag möglich (z. B. bestellt, Rechnung fehlt noch)","Startseite: „Offene Aufgaben“ statt „Heute wichtig“ – fehlende Rechnungsbeträge stehen ganz oben","Finanzen: Filter „Betrag offen“ und Kennzeichnung ⏳ in der Liste"]],
  ["1.16","23.11.2026",["Privateinlage zählt nicht mehr zu den Einnahmen und zum Ergebnis – wird separat angezeigt (wie in der Excel-Liste)","Einnahmen und Ausgaben 2026 aus der Excel-Liste übernommen (Importdatei)"]],
  ["1.15","23.11.2026",["Neu gestaltete Übersicht mit Begrüßung und vier Kennzahl-Kacheln","„Heute wichtig“: Wartezeiten, unvollständige Stammdaten, Lämmer ohne Ohrmarke, länger nicht erledigte Stallarbeiten","„Schnell erfassen“: Ablammung, Behandlung, Stallbuch und Buchung direkt von der Startseite","Grafik „Lämmer je Monat“","Kompakte Liste „Noch nicht gelammt“"]],
@@ -1042,7 +1134,8 @@ function lammForm(s,l){
       <div class="row"><div><label>Ohrmarke</label><input data-k="${i}:nr" value="${esc(y.nr)}"></div>
       <div><label>Geb.-Gewicht (kg)</label><input data-k="${i}:gewicht" inputmode="decimal" value="${esc(y.gewicht)}"></div></div>
       <label>Status</label><select data-k="${i}:status">${["lebend","tot geboren","verendet","verkauft"].map(o=>`<option ${y.status===o?"selected":""}>${o}</option>`).join("")}</select>
-      <label>Bemerkung</label><input data-k="${i}:bem" value="${esc(y.bem)}">
+      <div class="row"><div><label>Abgesetzt am</label><input type="date" data-k="${i}:abgesetzt" value="${esc(y.abgesetzt)}"></div><div><label>Bemerkung</label><input data-k="${i}:bem" value="${esc(y.bem)}"></div></div>
+      ${y.id&&merkFor("lamm",y.id).length?`<div style="margin-top:8px">${merkFor("lamm",y.id).map(n=>`<div class="merk" style="${n.erledigt?"opacity:.55;text-decoration:line-through":""}">📌 ${fmtD(n.datum)} ${esc(n.text)}</div>`).join("")}</div>`:""}
     </div>`).join("");
     document.querySelectorAll("[data-sx]").forEach(b=>b.onclick=()=>{const[i,v]=b.dataset.sx.split(":");lambs[i].sex=v;draw()});
     document.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{lambs.splice(+b.dataset.rm,1);draw()});
@@ -1066,7 +1159,7 @@ function lammForm(s,l){
   $("f").onsubmit=async e=>{
     e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
     const body={schafId:s.id,datum:d.datum,bock:String(d.bock).trim(),verlauf:d.verlauf,notiz:String(d.notiz).trim(),
-      laemmer:lambs.map(y=>({id:y.id||newId(),sex:y.sex||"",nr:(y.nr||"").trim(),gewicht:(y.gewicht||"").trim().replace(".",","),status:y.status||"lebend",bem:(y.bem||"").trim()})),
+      laemmer:lambs.map(y=>({id:y.id||newId(),sex:y.sex||"",nr:(y.nr||"").trim(),gewicht:(y.gewicht||"").trim().replace(".",","),status:y.status||"lebend",abgesetzt:(y.status||"lebend")==="lebend"?(y.abgesetzt||""):(y.abgesetzt||""),bem:(y.bem||"").trim()})),
       geaendert:new Date().toISOString()};
     try{
       if(l.id)await S.db.doc("lammungen/"+l.id).set(body);else await S.db.collection("lammungen").add(body);
@@ -1084,11 +1177,11 @@ function fail(e){
 const KEY="herdenbuch-v1";
 const BETRIEB_START={};
 let store;
-function loadStore(){try{const o=JSON.parse(localStorage.getItem(KEY));if(o&&o.schafe&&o.lammungen){o.behandlungen=o.behandlungen||{};o.finanzen=o.finanzen||{};o.kunden=o.kunden||{};o.medikamente=o.medikamente||{};o.felder=o.felder||{};o.ernte=o.ernte||{};o.stallbuch=o.stallbuch||{};o.meta=o.meta||{};o.betrieb=o.betrieb||{...BETRIEB_START};return o}}catch(e){}return{schafe:{},lammungen:{},finanzen:{},kunden:{},medikamente:{},felder:{},ernte:{},behandlungen:{},stallbuch:{},meta:{},betrieb:{...BETRIEB_START}}}
+function loadStore(){try{const o=JSON.parse(localStorage.getItem(KEY));if(o&&o.schafe&&o.lammungen){o.behandlungen=o.behandlungen||{};o.finanzen=o.finanzen||{};o.kunden=o.kunden||{};o.medikamente=o.medikamente||{};o.felder=o.felder||{};o.merkzettel=o.merkzettel||{};o.ernte=o.ernte||{};o.stallbuch=o.stallbuch||{};o.meta=o.meta||{};o.betrieb=o.betrieb||{...BETRIEB_START};return o}}catch(e){}return{schafe:{},lammungen:{},finanzen:{},kunden:{},medikamente:{},felder:{},ernte:{},merkzettel:{},behandlungen:{},stallbuch:{},meta:{},betrieb:{...BETRIEB_START}}}
 function saveStore(){store.meta=store.meta||{};store.meta.geaendert=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(store));if(typeof syncPush==="function")syncPush()}
 function ensureLambIds(o){for(const[lid,l]of Object.entries(o.lammungen||{}))(l.laemmer||[]).forEach((y,i)=>{if(!y.id)y.id=lid+"_"+i})}
 function migrateFelix(){const e=Object.entries(store.schafe||{}).find(([id,x])=>x.nr==="DE010801065313"&&x.typ==="Bock"&&!x.name);if(e&&!localStorage.getItem("herdenbuch-felix")){e[1].name="Felix";e[1].geaendert=new Date().toISOString();try{localStorage.setItem("herdenbuch-felix","1")}catch(x){}saveStore()}}
-function refresh(){ensureLambIds(store);migrateFelix();S.schafe=Object.entries(store.schafe).map(([id,d])=>({...d,id}));S.lamm=Object.entries(store.lammungen).map(([id,d])=>({...d,id}));S.beh=Object.entries(store.behandlungen).map(([id,d])=>({...d,id}));S.tb=Object.entries(store.stallbuch).map(([id,d])=>({...d,id}));S.fin=Object.entries(store.finanzen).map(([id,d])=>({...d,id}));S.kunden=Object.entries(store.kunden).map(([id,d])=>({...d,id}));S.med=Object.entries(store.medikamente).map(([id,d])=>({...d,id}));S.felder=Object.entries(store.felder).map(([id,d])=>({...d,id}));S.ernte=Object.entries(store.ernte).map(([id,d])=>({...d,id}));render()}
+function refresh(){ensureLambIds(store);migrateFelix();S.schafe=Object.entries(store.schafe).map(([id,d])=>({...d,id}));S.lamm=Object.entries(store.lammungen).map(([id,d])=>({...d,id}));S.beh=Object.entries(store.behandlungen).map(([id,d])=>({...d,id}));S.tb=Object.entries(store.stallbuch).map(([id,d])=>({...d,id}));S.fin=Object.entries(store.finanzen).map(([id,d])=>({...d,id}));S.kunden=Object.entries(store.kunden).map(([id,d])=>({...d,id}));S.med=Object.entries(store.medikamente).map(([id,d])=>({...d,id}));S.felder=Object.entries(store.felder).map(([id,d])=>({...d,id}));S.ernte=Object.entries(store.ernte).map(([id,d])=>({...d,id}));S.merk=Object.entries(store.merkzettel).map(([id,d])=>({...d,id}));render()}
 const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const localDb={
   doc(path){const[c,id]=path.split("/");return{
@@ -1124,7 +1217,7 @@ function importJSON(file){
   const fr=new FileReader();fr.onload=()=>{try{
     const inc=JSON.parse(fr.result);if(!inc.schafe||!inc.lammungen)throw 0;
     const del={...(store.deleted||{}),...(inc.deleted||{})};let n=0,skipNr=0;
-    for(const c of ["schafe","lammungen","behandlungen","stallbuch","finanzen","kunden","medikamente","felder","ernte"])for(const[id,d]of Object.entries(inc[c]||{})){
+    for(const c of ["schafe","lammungen","behandlungen","stallbuch","finanzen","kunden","medikamente","felder","ernte","merkzettel"])for(const[id,d]of Object.entries(inc[c]||{})){
       const cur=store[c][id];if(del[c+"/"+id])continue;
       if(c==="schafe"&&!cur){const nn=String(d.nr||"").replace(/\s+/g,"").toLowerCase();if(nn&&Object.entries(store.schafe).some(([i2,x])=>i2!==id&&String(x.nr||"").replace(/\s+/g,"").toLowerCase()===nn)){skipNr=(skipNr||0)+1;continue}}
       if(!cur||(d.geaendert||"")>(cur.geaendert||"")){store[c][id]=d;n++}}
@@ -1144,10 +1237,8 @@ function dataMenu(){
   <button class="btn sec" style="width:100%;margin-top:10px" id="csvb">💊 Behandlungen als Excel-Tabelle (CSV)</button>
   <button class="btn sec" style="width:100%;margin-top:22px" id="vrb">ℹ️ Versionsbuch (installiert: ${APP_VERSION})</button>
   <button class="btn" style="width:100%;margin-top:10px" id="syb">☁️ Synchronisierung ${SY.uid?"(angemeldet)":"einrichten"}</button>
-  <button class="btn sec" style="width:100%;margin-top:10px" id="pwc">🔑 Passwort ändern</button>
-  <button class="btn sec" style="width:100%;margin-top:10px" id="lknow">🔒 Jetzt sperren</button>
   <div class="acts"><button class="btn sec" id="cx">Schließen</button></div>`);
-  $("vrb").onclick=()=>{closeSheet();S.view="version";render();scrollTo(0,0)};$("pwc").onclick=()=>{closeSheet();showLock("change")};$("syb").onclick=()=>{closeSheet();setTimeout(syncSheet,50)};$("lknow").onclick=()=>{closeSheet();showLock(pwData()?"unlock":"setup")};
+  $("vrb").onclick=()=>{closeSheet();S.view="version";render();scrollTo(0,0)};$("syb").onclick=()=>{closeSheet();setTimeout(syncSheet,50)};
   $("ex").onclick=exportJSON;$("csv").onclick=exportCSV;$("csvb").onclick=exportBehCSV;$("csvs").onclick=exportBestandCSV;$("cx").onclick=closeSheet;
   $("im").onchange=e=>{if(e.target.files[0])importJSON(e.target.files[0])};
 }
@@ -1204,14 +1295,14 @@ function showLock(mode){
     unlock();toast(mode==="setup"?"Passwort festgelegt":"Passwort geändert")};
 }
 function unlock(){const el=$("lock");if(el)el.remove();document.body.style.overflow="";setTimeout(zeigeNeuigkeiten,300)}
-function lockInit(){showLock(pwData()?"unlock":"setup")}
+function lockInit(){try{localStorage.removeItem(PWKEY)}catch(e){}unlock()}
 let hiddenAt=0;
-document.addEventListener("visibilitychange",()=>{if(document.hidden)hiddenAt=Date.now();else if(hiddenAt&&Date.now()-hiddenAt>5*60*1000&&pwData()&&!$("lock"))showLock("unlock")});
+
 
 /* ---------- Cloud-Synchronisierung (Firebase) ---------- */
 const FB_CONFIG={apiKey:"AIzaSyBQytVN_fPvSkOya9XJHK-4_2CjcEHha1s",authDomain:"herdenbuch-658b1.firebaseapp.com",projectId:"herdenbuch-658b1",storageBucket:"herdenbuch-658b1.firebasestorage.app",messagingSenderId:"689034701101",appId:"1:689034701101:web:0673474370a60c1a390ba4"};
 const FB_URL="https://www.gstatic.com/firebasejs/11.10.0/";
-const SYNC_C=["schafe","lammungen","behandlungen","stallbuch","finanzen","kunden","medikamente","felder","ernte"];
+const SYNC_C=["schafe","lammungen","behandlungen","stallbuch","finanzen","kunden","medikamente","felder","ernte","merkzettel"];
 const SHADOWKEY="herdenbuch-shadow";
 const SY={state:"aus",email:"",fb:null,auth:null,fs:null,uid:null,unsub:[],first:{},pending:false,loading:false};
 let shadow={};try{shadow=JSON.parse(localStorage.getItem(SHADOWKEY))||{}}catch(e){shadow={}}
